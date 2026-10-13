@@ -1,0 +1,21 @@
+# CSSketch — Netlify
+# Sitio estático (raíz) + MCP server stateless en Functions.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# URL limpia para el MCP: /mcp → function
+[[redirects]]
+  from = "/mcp"
+  to = "/.netlify/functions/mcp"
+  status = 200
+
+# SPA fallback: rutas sin extensión → index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

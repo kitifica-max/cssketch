@@ -1,0 +1,14 @@
+# No publicar como estáticos: solo el sitio (index.html, css/, js/)
+# Las functions se despliegan aparte; el código del MCP no expone.
+
+mcp/
+netlify/
+node_modules/
+.git/
+.gitignore
+.netlifyignore
+netlify.toml
+package.json
+package-lock.json
+README.md
+.DS_Store

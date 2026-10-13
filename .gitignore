@@ -1,0 +1,16 @@
+# Dependencias
+node_modules/
+
+# Netlify
+.netlify/
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Artefactos locales del MCP (se guardan en ~/cssketch/artes, fuera del repo)
+# nada que ignorar aquí

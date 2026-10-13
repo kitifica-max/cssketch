@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>CSSketch · Ilustraciones en HTML + CSS</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d12'/%3E%3Cpath d='M9 11l-4 5 4 5M23 11l4 5-4 5M18 9l-4 14' stroke='%235eead4' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#" aria-label="CSSketch">
+    <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="7" fill="currentColor" opacity=".08"/>
+      <path d="M9 11l-4 5 4 5M23 11l4 5-4 5M18 9l-4 14" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <span class="brand__name">CSS<em>ketch</em></span>
+  </a>
+
+  <nav class="stepper" aria-label="Flujo de trabajo">
+    <button class="stepper__item is-active" data-goto="1" type="button">
+      <span class="stepper__dot">1</span><span class="stepper__label">Boceto</span>
+    </button>
+    <span class="stepper__rail" aria-hidden="true"></span>
+    <button class="stepper__item" data-goto="2" type="button">
+      <span class="stepper__dot">2</span><span class="stepper__label">Referencia</span>
+    </button>
+    <span class="stepper__rail" aria-hidden="true"></span>
+    <button class="stepper__item" data-goto="3" type="button">
+      <span class="stepper__dot">3</span><span class="stepper__label">Plan</span>
+    </button>
+    <span class="stepper__rail" aria-hidden="true"></span>
+    <button class="stepper__item" data-goto="4" type="button">
+      <span class="stepper__dot">4</span><span class="stepper__label">Render</span>
+    </button>
+  </nav>
+
+  <div class="topbar__end">
+    <span class="pill">local-first · 0 deps</span>
+    <button class="btn btn--ghost btn--sm" id="btn-reset-app" type="button">Reiniciar</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ══════════ PASO 1 · SUBIR BOCETO ══════════ -->
+  <section class="step is-active" data-step="1" aria-label="Paso 1: subir boceto">
+    <div class="step__head">
+      <span class="step__eyebrow">Paso 01 / 04</span>
+      <h1 class="step__title">Sube el boceto</h1>
+      <p class="step__sub">La imagen que define la <strong>estructura</strong>: composición, proporciones y silueta de lo que se va a construir.</p>
+    </div>
+
+    <div class="drop" id="drop-sketch" tabindex="0" role="button"
+         aria-label="Zona de carga del boceto. Arrastra una imagen o pulsa para seleccionar.">
+      <input type="file" accept="image/*" hidden>
+      <div class="drop__idle">
+        <svg class="drop__icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M24 32V12m0 0l-8 8m8-8l8 8" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M8 30v4a6 6 0 006 6h20a6 6 0 006-6v-4" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" fill="none"/>
+        </svg>
+        <p class="drop__title">Arrastra tu boceto aquí</p>
+        <p class="drop__hint">PNG · JPG · WEBP · SVG — o haz clic para elegir</p>
+      </div>
+      <figure class="drop__preview" hidden>
+        <img alt="Vista previa del boceto">
+        <figcaption>
+          <span class="drop__name"></span>
+          <span class="drop__meta"></span>
+        </figcaption>
+        <button class="btn btn--tiny" type="button" data-clear>Cambiar</button>
+      </figure>
+    </div>
+
+    <footer class="step__foot">
+      <span class="status" data-status="1">Esperando imagen del boceto…</span>
+      <button class="btn btn--primary" id="btn-to-2" type="button" disabled>Continuar</button>
+    </footer>
+  </section>
+
+  <!-- ══════════ PASO 2 · SUBIR REFERENCIA ══════════ -->
+  <section class="step" data-step="2" aria-label="Paso 2: subir referencia">
+    <div class="step__head">
+      <span class="step__eyebrow">Paso 02 / 04</span>
+      <h1 class="step__title">Sube la referencia</h1>
+      <p class="step__sub">La imagen que define el <strong>estilo visual</strong>: paleta, iluminación, textura y nivel de detalle.</p>
+    </div>
+
+    <div class="drop" id="drop-ref" tabindex="0" role="button"
+         aria-label="Zona de carga de la referencia. Arrastra una imagen o pulsa para seleccionar.">
+      <input type="file" accept="image/*" hidden>
+      <div class="drop__idle">
+        <svg class="drop__icon" viewBox="0 0 48 48" aria-hidden="true">
+          <rect x="7" y="11" width="34" height="26" rx="4" stroke="currentColor" stroke-width="2.4" fill="none"/>
+          <circle cx="17" cy="21" r="3.2" fill="currentColor"/>
+          <path d="M9 33l9-8 6 5 5-4 10 8" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <p class="drop__title">Arrastra tu referencia aquí</p>
+        <p class="drop__hint">Paleta · luz · acabado — o haz clic para elegir</p>
+      </div>
+      <figure class="drop__preview" hidden>
+        <img alt="Vista previa de la referencia">
+        <figcaption>
+          <span class="drop__name"></span>
+          <span class="drop__meta"></span>
+        </figcaption>
+        <button class="btn btn--tiny" type="button" data-clear>Cambiar</button>
+      </figure>
+    </div>
+
+    <footer class="step__foot">
+      <button class="btn btn--ghost" data-goto="1" type="button">Atrás</button>
+      <span class="status" data-status="2">Esperando imagen de referencia…</span>
+      <button class="btn btn--primary" id="btn-analyze" type="button" disabled>Analizar imágenes</button>
+    </footer>
+  </section>
+
+  <!-- ══════════ PASO 3 · PLAN DE CONSTRUCCIÓN ══════════ -->
+  <section class="step" data-step="3" aria-label="Paso 3: plan de construcción">
+    <div class="step__head">
+      <span class="step__eyebrow">Paso 03 / 04</span>
+      <h1 class="step__title">Plan de construcción</h1>
+      <p class="step__sub">Prompt Técnico Maestro generado a partir de tus dos imágenes. Léelo, editalo y ajústalo sin restricciones.</p>
+    </div>
+
+    <div class="chips" id="plan-chips">
+      <span class="chip" data-chip="sketch">boceto</span>
+      <span class="chip" data-chip="ref">referencia</span>
+      <span class="chip chip--muted" id="chip-chars">0 car.</span>
+    </div>
+
+    <div class="editor">
+      <div class="editor__bar">
+        <span class="editor__file">prompt-tecnico-maestro.txt</span>
+        <div class="editor__tools">
+          <button class="btn btn--tiny" id="btn-reanalyze" type="button">Regenerar</button>
+        </div>
+      </div>
+      <textarea id="prompt-editor" spellcheck="false"
+                placeholder="El prompt técnico aparecerá aquí…"></textarea>
+    </div>
+
+    <footer class="step__foot">
+      <button class="btn btn--ghost" data-goto="2" type="button">Atrás</button>
+      <span class="status" data-status="3">Edita el plan cuando quieras.</span>
+      <button class="btn btn--primary" id="btn-build" type="button">Ejecutar y renderizar</button>
+    </footer>
+  </section>
+
+  <!-- ══════════ PASO 4 · WORKSPACE ══════════ -->
+  <section class="step step--workspace" data-step="4" aria-label="Paso 4: ejecutar y renderizar">
+
+    <aside class="props" aria-label="Panel de propiedades">
+      <header class="props__head">
+        <h2>Propiedades</h2>
+        <span class="props__count" id="props-count">0</span>
+      </header>
+      <div class="props__toolbar">
+        <button class="btn btn--tiny" id="btn-reset-vars" type="button">Reset vars</button>
+        <button class="btn btn--tiny" id="btn-collapse" type="button">Colapsar todo</button>
+      </div>
+      <div class="props__body" id="props-body"><!-- controles dinámicos --></div>
+      <footer class="props__foot">
+        <span class="status" data-status="4">—</span>
+      </footer>
+    </aside>
+
+    <section class="sandbox" aria-label="Sandbox de renderizado">
+      <header class="sandbox__bar">
+        <span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="sandbox__file">sandbox · index.html</span>
+        <div class="sandbox__tools">
+          <button class="btn btn--tiny" id="btn-reload" type="button">Recargar</button>
+          <button class="btn btn--tiny" id="btn-copy" type="button">Copiar HTML</button>
+          <button class="btn btn--tiny" id="btn-download" type="button">Descargar</button>
+          <button class="btn btn--tiny btn--ghost" data-goto="3" type="button">Editar plan</button>
+        </div>
+      </header>
+      <div class="sandbox__viewport">
+        <iframe id="render-frame" title="Sandbox de renderizado" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div class="sandbox__foot">
+        <span id="frame-meta">—</span>
+        <span id="frame-fps">—</span>
+      </div>
+    </section>
+
+  </section>
+
+</main>
+
+<footer class="statusbar">
+  <span class="statusbar__left" id="status-left">listo</span>
+  <span class="statusbar__right" id="status-right">CSSketch · HTML5 + CSS3 + Vanilla JS (ES Modules)</span>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Aviso: los ES Modules no se cargan bajo file:// en Chrome/Edge/Safari -->
+<div class="proto-guard" id="proto-guard" hidden>
+  <div class="proto-guard__card">
+    <p class="proto-guard__title">Abrir con un servidor local</p>
+    <p class="proto-guard__text">
+      Los <code>&lt;script type="module"&gt;</code> están bloqueados por CORS bajo
+      <code>file://</code>. Levanta un servidor en la raíz del proyecto:
+    </p>
+    <pre class="proto-guard__code">python3 -m http.server 8080</pre>
+    <p class="proto-guard__text">y abre <code>http://localhost:8080/</code></p>
+    <button class="btn btn--tiny" type="button" id="proto-guard-copy">Copiar comando</button>
+  </div>
+</div>
+<script>
+  if (location.protocol === 'file:') {
+    var g = document.getElementById('proto-guard');
+    g.hidden = false;
+    document.getElementById('proto-guard-copy').addEventListener('click', function () {
+      var t = 'python3 -m http.server 8080';
+      if (navigator.clipboard) { navigator.clipboard.writeText(t); }
+      this.textContent = 'Copiado ✓';
+    });
+  }
+</script>
+
+<script type="module" src="js/ui.js"></script>
+</body>
+</html>

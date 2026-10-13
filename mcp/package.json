@@ -1,0 +1,25 @@
+{
+  "name": "cssketch-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server de CSSketch — genera, valida y previsualiza CSS Art.",
+  "bin": {
+    "cssketch-mcp": "./index.js"
+  },
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "prompt.js",
+    "validate.js",
+    "preview.js",
+    "../js/parser.js"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^3.25 || ^4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
