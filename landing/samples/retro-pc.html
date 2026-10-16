@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>Retro PC BSOD</title>
+<style>
+:root {
+  /*type:color*/ --bg: #9090CA;
+  /*type:color*/ --body-top: #E5DDD0;
+  /*type:color*/ --body-right: #D2CAB8;
+  /*type:color*/ --body-left: #B8B2A2;
+  /*type:color*/ --mon-top: #DEDAD0;
+  /*type:color*/ --mon-right: #CECABF;
+  /*type:color*/ --mon-left: #B8B5A8;
+  /*type:color*/ --screen: #3B4EC0;
+  /*type:color*/ --screen-hl: #5568D8;
+  /*type:color*/ --btn: #5A7AC8;
+  /*type:color*/ --slot: #252018;
+  /*type:color*/ --ink: #18140E;
+  /*type:color*/ --sombra: #555598;
+  /*type:range|min:0.5|max:4|step:0.5|unit:px*/ --bw: 2;
+  /*type:select|options:flat-tone|line-art*/ --estilo: flat-tone;
+  /* variables editadas en CSSketch */
+  --bg: #7d9fc2;
+  --sombra: #575757;
+  --bw: 1.5;
+  --estilo: line-art;
+  
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: var(--bg); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.scene { width: 480px; height: 480px; position: relative; }
+svg { width: 100%; height: 100%; }
+
+/*── non-scaling-stroke para grupos escalados ──*/
+.sf  { vector-effect: non-scaling-stroke; stroke: var(--ink); stroke-width: calc(var(--bw)*1px); stroke-linejoin: round; }
+.sf2 { vector-effect: non-scaling-stroke; stroke: var(--ink); stroke-width: 1px; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+<div class="scene">
+<!--
+ESCENA ISOMÉTRICA — canon 30°, G=25px/u
+Cuadrícula: U=(0.866,-0.5)  V=(-0.866,-0.5)  W=(0,-1)
+
+BASE   (L=6U  A=5V  H=3W)  desde P000=(0,0)
+MONITOR(L=6U  A=5V  H=6W)  desde P003=(0,-3)
+
+Face-transforms canónicos (dentro del grupo scene escalado G=25):
+  cara-top:   matrix( 0.866,-0.5, -0.866,-0.5, ox,oy)
+  cara-right: matrix( 0.866,-0.5,  0,   -1,    ox,oy)
+  cara-left:  matrix(-0.866,-0.5,  0,   -1,    ox,oy)
+
+Z (atrás→delante):
+  sombra · base-izq · base-der · base-top ·
+  mon-izq · mon-der · mon-top
+-->
+<svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg" style="--x: 15.23; --y: -64.62;">
+
+  <!-- Fondo lavanda -->
+  <rect width="480" height="480" fill="var(--bg)"></rect>
+
+  <!-- ── SCENE: G=25px, origen en P000=(240,440) ── -->
+  <g id="scene" transform="translate(240,440) scale(25)">
+
+    <!-- ── Sombra en plano suelo (U-V desde offset (-0.4,0.25)) ── -->
+    <g data-z="1" transform="matrix(0.866,-0.5, -0.866,-0.5, -0.4,0.25)">
+      <rect x="0" y="0" width="7.2" height="6.8" fill="var(--sombra)" opacity="0.22"></rect>
+    </g>
+
+    <!-- ════════ BASE ════════ -->
+
+    <!-- base cara izquierda (V-W desde P000) -->
+    <g data-z="2" transform="matrix(-0.866,-0.5, 0,-1, 0,0)">
+      <rect x="0" y="0" width="5" height="3" fill="var(--body-left)" class="sf"></rect>
+      <rect x="0" y="0.08" width="5" height="0.10" fill="#A0A090" opacity="0.30"></rect>
+    </g>
+
+    <!-- base cara derecha (U-W desde P000) -->
+    <g data-z="3" transform="matrix(0.866,-0.5, 0,-1, 0,0)">
+      <rect x="0" y="0" width="6" height="3" fill="var(--body-right)" class="sf"></rect>
+      <rect x="0" y="0.06" width="6" height="0.10" fill="white" opacity="0.18"></rect>
+      <!-- Slot disquete principal -->
+      <rect x="0.38" y="0.26" width="4.84" height="0.46" fill="var(--slot)" class="sf2"></rect>
+      <rect x="0.48" y="0.33" width="4.64" height="0.08" fill="#3C3028" opacity="0.60"></rect>
+      <!-- Slot pequeño -->
+      <rect x="0.38" y="0.96" width="2.72" height="0.36" fill="var(--slot)" class="sf2"></rect>
+      <!-- LED verde slot -->
+      <rect x="0.40" y="1.48" width="0.22" height="0.16" fill="#58D858" opacity="0.88"></rect>
+      <!-- Grille altavoz (5 ranuras) -->
+      <rect x="0.38" y="1.95" width="1.40" height="0.09" fill="var(--slot)" opacity="0.65"></rect>
+      <rect x="0.38" y="2.15" width="1.40" height="0.09" fill="var(--slot)" opacity="0.65"></rect>
+      <rect x="0.38" y="2.35" width="1.40" height="0.09" fill="var(--slot)" opacity="0.65"></rect>
+      <rect x="0.38" y="2.55" width="1.40" height="0.09" fill="var(--slot)" opacity="0.65"></rect>
+      <rect x="0.38" y="2.75" width="1.40" height="0.09" fill="var(--slot)" opacity="0.65"></rect>
+      <!-- Botón azul 1 -->
+      <rect x="4.10" y="1.08" width="0.72" height="0.72" fill="var(--btn)" class="sf2"></rect>
+      <rect x="4.18" y="1.66" width="0.52" height="0.08" fill="white" opacity="0.26"></rect>
+      <!-- Botón azul 2 -->
+      <rect x="4.97" y="1.08" width="0.72" height="0.72" fill="var(--btn)" class="sf2"></rect>
+      <rect x="5.05" y="1.66" width="0.52" height="0.08" fill="white" opacity="0.26"></rect>
+      <!-- Botón cuadrado power -->
+      <rect x="0.38" y="1.90" width="0.58" height="0.58" fill="#C8C0B0" class="sf2"></rect>
+      <!-- LED power naranja -->
+      <rect x="1.10" y="2.04" width="0.22" height="0.22" fill="#E87030" opacity="0.86"></rect>
+    </g>
+
+    <!-- base cara top (U-V desde P003=(0,-3)) -->
+    <g data-z="4" transform="matrix(0.866,-0.5, -0.866,-0.5, 0,-3)">
+      <rect x="0" y="0" width="6" height="5" fill="var(--body-top)" class="sf"></rect>
+      <!-- Surco decorativo -->
+      <rect x="0.50" y="2.28" width="5.00" height="0.12" fill="#C8C2B0" opacity="0.48"></rect>
+      <rect x="0.50" y="2.43" width="5.00" height="0.06" fill="white" opacity="0.16"></rect>
+      <!-- Sombra borde trasero -->
+      <rect x="0" y="4.62" width="6.00" height="0.38" fill="#B8B2A0" opacity="0.32"></rect>
+    </g>
+
+    <!-- ════════ MONITOR ════════ -->
+
+    <!-- monitor cara izquierda (V-W desde M000=(0,-3)) -->
+    <g data-z="5" transform="matrix(-0.866,-0.5, 0,-1, 0,-3)">
+      <rect x="0" y="0" width="5" height="6" fill="var(--mon-left)" class="sf"></rect>
+      <rect x="4.72" y="0.3" width="0.28" height="5.4" fill="white" opacity="0.08"></rect>
+    </g>
+
+    <!-- monitor cara derecha + pantalla (U-W desde M000=(0,-3)) -->
+    <g data-z="6" transform="matrix(0.866,-0.5, 0,-1, 0,-3)">
+      <rect x="0" y="0" width="6" height="6" fill="var(--mon-right)" class="sf"></rect>
+      <!-- Marco bisel interior -->
+      <rect x="0.22" y="0.22" width="5.56" height="5.56" fill="#C0BAA8" class="sf2"></rect>
+      <!-- Pantalla BSOD azul -->
+      <rect x="0.52" y="0.52" width="4.96" height="4.96" fill="var(--screen)"></rect>
+      <!-- Reflejo claro esquina sup-izq -->
+      <rect x="0.52" y="3.68" width="1.90" height="1.80" fill="var(--screen-hl)" opacity="0.36"></rect>
+      <!-- Glint blanco -->
+      <rect x="0.54" y="5.00" width="0.64" height="0.42" fill="white" opacity="0.15"></rect>
+      <!-- Barra título BSOD -->
+      <rect x="0.72" y="4.62" width="4.56" height="0.46" fill="#2336A8"></rect>
+      <!-- Texto título "Blender" -->
+      <rect x="1.40" y="4.68" width="2.20" height="0.26" fill="white" opacity="0.88"></rect>
+      <!-- Líneas texto BSOD (8 filas) -->
+      <rect x="0.72" y="4.24" width="4.50" height="0.14" fill="white" opacity="0.78"></rect>
+      <rect x="0.72" y="4.02" width="4.40" height="0.14" fill="white" opacity="0.68"></rect>
+      <rect x="0.72" y="3.80" width="4.20" height="0.14" fill="white" opacity="0.65"></rect>
+      <rect x="0.82" y="3.52" width="3.80" height="0.12" fill="white" opacity="0.55"></rect>
+      <rect x="0.82" y="3.28" width="3.60" height="0.12" fill="white" opacity="0.50"></rect>
+      <rect x="0.82" y="3.04" width="3.50" height="0.12" fill="white" opacity="0.45"></rect>
+      <rect x="0.82" y="2.80" width="3.20" height="0.12" fill="white" opacity="0.40"></rect>
+      <rect x="0.82" y="2.56" width="3.00" height="0.12" fill="white" opacity="0.32"></rect>
+    </g>
+
+    <!-- monitor cara top (U-V desde M006=(0,-9)) -->
+    <g data-z="7" transform="matrix(0.866,-0.5, -0.866,-0.5, 0,-9)">
+      <rect x="0" y="0" width="6" height="5" fill="var(--mon-top)" class="sf"></rect>
+      <!-- Ranuras ventilación (4) -->
+      <rect x="1.50" y="0.88" width="3.00" height="0.12" fill="#BFBAA8" opacity="0.65"></rect>
+      <rect x="1.50" y="1.38" width="3.00" height="0.12" fill="#BFBAA8" opacity="0.65"></rect>
+      <rect x="1.50" y="1.88" width="3.00" height="0.12" fill="#BFBAA8" opacity="0.65"></rect>
+      <rect x="1.50" y="2.38" width="3.00" height="0.12" fill="#BFBAA8" opacity="0.65"></rect>
+      <!-- Sombra borde izquierdo -->
+      <rect x="0" y="0" width="0.38" height="5.00" fill="#A8A498" opacity="0.25"></rect>
+      <!-- Sombra borde trasero -->
+      <rect x="0" y="4.60" width="6.00" height="0.40" fill="#B8B2A0" opacity="0.22"></rect>
+    </g>
+
+  </g><!-- /scene -->
+
+</svg>
+</div>
+
+
+</body></html>

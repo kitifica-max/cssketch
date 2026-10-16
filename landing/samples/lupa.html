@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lupa isométrica</title>
+<style>
+:root {
+  /*type:color*/ --ink: #111111;
+  /*type:color*/ --paper: #ffffff;
+  /*type:range|min:1|max:8|step:0.5|unit:px*/ --bw: 3;
+  /*type:range|min:-30|max:30|step:1|unit:px*/ --lens-dy: 0;
+}
+
+/*── Base ──*/
+html, body { margin: 0; background: var(--paper); }
+
+/*── Escena ──*/
+.scene {
+  position: relative;
+  width: min(100vw, 450px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--paper);
+}
+.scene > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/*── Trazos ──*/
+.ln {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: calc(var(--bw) * 1px);
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.ink { fill: var(--ink); }
+.mark {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: calc(var(--bw) * 0.8px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.thin {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: calc(var(--bw) * 0.6px);
+  stroke-linecap: round;
+}
+
+/*── Lupa ──*/
+.lens { transform: translateY(calc(var(--lens-dy) * 1px)); }
+</style>
+</head>
+<body>
+<div class="scene">
+  <!-- Z (atrás → delante): 1 decoración · 2 burbuja · 3 barras · 4 mango · 5 lupa · 6 teclas
+       Oclusión: 5 tapa a 4 (el aro cubre el arranque del mango). Resto sin solape. -->
+  <svg viewBox="0 0 450 450" xmlns="http://www.w3.org/2000/svg" aria-label="Lupa, chat, barras y teclas">
+
+    <!-- Z1 · Decoración suelta -->
+    <g data-z="1">
+      <path class="thin" d="M226 74 q5 -4 10 0 t10 0 t10 0 t10 0"/>
+      <circle class="ln" cx="234" cy="122" r="3"/>
+      <circle class="ln" cx="370" cy="118" r="3"/>
+      <circle class="ln" cx="96" cy="358" r="3"/>
+      <path class="mark" d="M55 228h10M60 223v10"/>
+      <path class="mark" d="M372 312l8 8M380 312l-8 8"/>
+    </g>
+
+    <!-- Z2 · Burbuja de chat (plano -V / W, cuadrícula 30°) -->
+    <g data-z="2">
+      <polygon class="ln" points="60,62 129,102 129,172 60,132"/>
+      <circle class="ink" cx="78" cy="127" r="7"/>
+      <circle class="ink" cx="96" cy="118" r="6"/>
+      <circle class="ink" cx="111" cy="110" r="5"/>
+    </g>
+
+    <!-- Z3 · Barras: cara derecha (U) negra, cara izquierda (V) blanca, tapa (W) blanca -->
+    <g data-z="3">
+      <g id="bar-1">
+        <polygon class="ln" points="288,205 279.3,200 279.3,123 288,128"/>
+        <polygon class="ink" points="288,205 296.7,200 296.7,123 288,128"/>
+        <polygon class="ln" points="288,128 296.7,123 288,118 279.3,123"/>
+      </g>
+      <g id="bar-2">
+        <polygon class="ln" points="316,222 307.3,217 307.3,148 316,153"/>
+        <polygon class="ink" points="316,222 324.7,217 324.7,148 316,153"/>
+        <polygon class="ln" points="316,153 324.7,148 316,143 307.3,148"/>
+      </g>
+      <g id="bar-3">
+        <polygon class="ln" points="344,233 335.3,228 335.3,138 344,143"/>
+        <polygon class="ink" points="344,233 352.7,228 352.7,138 344,143"/>
+        <polygon class="ln" points="344,143 352.7,138 344,133 335.3,138"/>
+      </g>
+      <g id="bar-4">
+        <polygon class="ln" points="372,252 363.3,247 363.3,191 372,196"/>
+        <polygon class="ink" points="372,252 380.7,247 380.7,191 372,196"/>
+        <polygon class="ln" points="372,196 380.7,191 372,186 363.3,191"/>
+      </g>
+    </g>
+
+    <!-- Z4 · Mango: cilindro de radio 12 a lo largo de -V. Eje A(246,244) → B(338,297).
+         Siluetas: A±o y B±o con o = (0.612r, -1.061r). Tapa B: círculo en plano U-W
+         = matrix(0.866r, -0.5r, 0, -r, Bx, By). -->
+    <g data-z="4" id="handle">
+      <path class="ln" d="M253.3 231.3 L345.1 284.3 L330.5 309.7 L238.7 256.7 Z"/>
+      <circle class="ln" r="1" transform="matrix(10.39 -6 0 -12 337.8 297)" vector-effect="non-scaling-stroke"/>
+      <circle class="thin" r="1" transform="matrix(6.06 -3.5 0 -7 337.8 297)" vector-effect="non-scaling-stroke"/>
+    </g>
+
+    <!-- Z5 · Lupa: aro en el plano del suelo (elipse ry/rx = 0.577) -->
+    <g data-z="5" class="lens">
+      <ellipse class="ln" cx="172" cy="236" rx="92" ry="53"/>
+      <ellipse class="ln" cx="172" cy="222" rx="92" ry="53"/>
+      <ellipse class="ink" cx="172" cy="222" rx="84" ry="48"/>
+      <ellipse class="ln" cx="172" cy="226" rx="78" ry="45"/>
+      <polygon class="ink" points="120,256 134,264 134,280 120,272"/>
+      <ellipse class="ink" cx="162" cy="196" rx="11" ry="7"/>
+      <ellipse class="ink" cx="147" cy="212" rx="6" ry="4"/>
+    </g>
+
+    <!-- Z6 · Teclas: losetas en el plano del suelo -->
+    <g data-z="6">
+      <g id="key-plus">
+        <rect class="ln" x="-11" y="-11" width="22" height="22" rx="4" transform="matrix(0.866 -0.5 -0.866 -0.5 125 319)"/>
+        <rect class="ln" x="-11" y="-11" width="22" height="22" rx="4" transform="matrix(0.866 -0.5 -0.866 -0.5 125 312)"/>
+        <path class="mark" d="M-4 0H4M0 -4V4" transform="matrix(0.866 -0.5 -0.866 -0.5 125 312)"/>
+      </g>
+      <g id="key-check">
+        <rect class="ln" x="-11" y="-11" width="22" height="22" rx="4" transform="matrix(0.866 -0.5 -0.866 -0.5 165 342)"/>
+        <rect class="ln" x="-11" y="-11" width="22" height="22" rx="4" transform="matrix(0.866 -0.5 -0.866 -0.5 165 335)"/>
+        <path class="mark" d="M-5 0L-2 4L5 -4" transform="matrix(0.866 -0.5 -0.866 -0.5 165 335)"/>
+      </g>
+      <g id="key-blank">
+        <rect class="ln" x="-11" y="-11" width="22" height="22" rx="4" transform="matrix(0.866 -0.5 -0.866 -0.5 208 365)"/>
+        <rect class="ln" x="-11" y="-11" width="22" height="22" rx="4" transform="matrix(0.866 -0.5 -0.866 -0.5 208 358)"/>
+      </g>
+    </g>
+  </svg>
+</div>
+</body>
+</html>

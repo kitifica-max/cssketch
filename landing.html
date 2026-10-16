@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSSketch · Ilustraciones isométricas desde tu imagen</title>
+<meta name="description" content="Servidor MCP que convierte cualquier imagen o descripción en una ilustración isométrica editable en HTML y SVG. Se instala en Claude Code en un comando.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #000000;
+  --paper: #ffffff;
+  --grey: #4d4d4d;
+  --soft: #f2f2f2;
+  --font-head: "Orbitron", "Arial Black", sans-serif;
+  --font-body: "Jost", "Futura", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #ffffff;
+    --paper: #000000;
+    --grey: #b3b3b3;
+    --soft: #141414;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #ffffff;
+  --paper: #000000;
+  --grey: #b3b3b3;
+  --soft: #141414;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body {
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg, iframe { max-width: 100%; display: block; }
+a { color: inherit; }
+
+/* ── Retícula: cada celda se separa con líneas de 1px, como en la referencia ── */
+.grid { display: grid; border-left: 1px solid var(--ink); }
+.cell { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 28px; min-width: 0; }
+.wrap { width: 100%; }
+
+h1, h2, h3 { font-family: var(--font-head); font-weight: 800; text-transform: uppercase; line-height: 1.04; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: clamp(2.2rem, 7.4vw, 6.4rem); }
+h2 { font-size: clamp(1.6rem, 4.2vw, 3.4rem); }
+h3 { font-size: 1rem; letter-spacing: 0.03em; }
+p { margin: 0 0 14px; }
+.muted { color: var(--grey); }
+.label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 14px; }
+.num { font-family: var(--font-body); font-weight: 500; font-size: 0.95rem; vertical-align: top; margin-right: 8px; }
+
+/* ── Botones ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 18px;
+  min-height: 52px; padding: 0 22px;
+  font-family: var(--font-body); font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer;
+  border: 1px solid var(--ink); background: var(--ink); color: var(--paper); border-radius: 0;
+}
+.btn::after { content: "→"; }
+.btn--ghost { background: var(--paper); color: var(--ink); }
+.btn:hover { background: var(--paper); color: var(--ink); }
+.btn--ghost:hover { background: var(--ink); color: var(--paper); }
+.btn:focus-visible, a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+/* ── Cabecera ── */
+header.top { position: sticky; top: 0; z-index: 10; background: var(--paper); }
+header.top .grid { grid-template-columns: 1fr auto; }
+header.top .cell { padding: 0 24px; min-height: 60px; display: flex; align-items: center; }
+.brand { font-family: var(--font-head); font-weight: 800; text-decoration: none; letter-spacing: 0.04em; text-transform: uppercase; }
+nav.links { display: flex; gap: 26px; align-items: center; }
+nav.links a { text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+nav.links a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* ── Hero ── */
+.hero-title { grid-template-columns: 1fr; }
+.hero-title .cell { padding: 36px 28px 40px; }
+.hero-split { grid-template-columns: 1fr 1fr; }
+.hero-split .copy { display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
+.lead { font-size: 1.2rem; max-width: 44ch; margin: 0; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.cta-row .btn { min-width: 240px; }
+.micro { font-size: 0.9rem; color: var(--grey); margin: 0; }
+.hero-split .art { padding: 0; }
+.hero-split .art iframe { width: 100%; aspect-ratio: 1 / 1; border: 0; background: var(--soft); }
+
+/* ── Banda de transformación: 4 celdas ── */
+.band { grid-template-columns: repeat(4, 1fr); }
+.band .cell { padding: 0; position: relative; }
+.band .tile { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: var(--soft); }
+.band .tile img, .band .tile iframe { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border: 0; display: block; }
+.band .caption { padding: 14px 18px; border-top: 1px solid var(--ink); font-size: 0.92rem; display: flex; justify-content: space-between; gap: 12px; }
+.band .caption span:last-child { color: var(--grey); }
+.band .note { padding: 22px 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; }
+
+/* ── Secciones numeradas ── */
+.section-head { grid-template-columns: 1fr 1fr; }
+.section-head .cell { min-height: 210px; display: flex; flex-direction: column; justify-content: space-between; }
+.section-head .side { font-size: 1.02rem; color: var(--grey); max-width: 42ch; }
+
+.steps { grid-template-columns: repeat(3, 1fr); }
+.steps .cell { min-height: 240px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
+.step-n { font-family: var(--font-head); font-weight: 800; font-size: 2.6rem; line-height: 1; }
+
+/* ── Instalar: bloque invertido ── */
+.install-block { background: var(--ink); color: var(--paper); }
+.install-block .grid { border-left-color: var(--paper); }
+.install-block .cell { border-color: var(--paper); }
+.install-block .muted { color: #cfcfcf; }
+.install-cols { grid-template-columns: 1.1fr 0.9fr; }
+pre.code {
+  background: var(--paper); color: var(--ink); border: 1px solid var(--paper);
+  padding: 18px 20px; overflow-x: auto; margin: 0 0 12px;
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.copy {
+  font-family: var(--font-body); font-size: 0.95rem; font-weight: 600;
+  border: 1px solid var(--paper); background: transparent; color: var(--paper);
+  border-radius: 0; padding: 8px 16px; cursor: pointer;
+}
+.copy:hover { background: var(--paper); color: var(--ink); }
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+th, td { text-align: left; padding: 11px 8px; border-bottom: 1px solid #3a3a3a; vertical-align: top; }
+th { color: #cfcfcf; font-weight: 600; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.08em; }
+code { font: 0.92em ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* ── FAQ ── */
+details { border-bottom: 1px solid var(--ink); padding: 20px 0; }
+details:first-of-type { border-top: 1px solid var(--ink); }
+summary { cursor: pointer; font-family: var(--font-head); font-weight: 600; font-size: 1rem; text-transform: uppercase; list-style: none; letter-spacing: 0.02em; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; float: right; font-family: var(--font-head); }
+details[open] summary::after { content: "−"; }
+details p { margin: 12px 0 0; color: var(--grey); max-width: 70ch; }
+
+/* ── Pie / crédito ── */
+footer .grid { grid-template-columns: 1fr auto; }
+footer .cell { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; min-height: 96px; }
+.credit { display: flex; align-items: center; gap: 16px; text-decoration: none; }
+.credit span { color: var(--grey); font-size: 0.95rem; }
+.credit img { height: 34px; width: auto; filter: grayscale(1) contrast(1.1); }
+.foot-links { display: flex; gap: 22px; font-size: 0.95rem; }
+.foot-links a { color: var(--grey); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .hero-split, .section-head, .install-cols { grid-template-columns: 1fr; }
+  .band { grid-template-columns: 1fr 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .cell { padding: 22px; }
+  nav.links a:not(.btn) { display: none; }
+  footer .grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .band { grid-template-columns: 1fr; }
+  .cta-row .btn { min-width: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="grid">
+    <div class="cell">
+      <a class="brand" href="#inicio">CSSketch</a>
+    </div>
+    <div class="cell" style="padding:0">
+      <nav class="links" aria-label="Principal" style="padding:0 24px;">
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#faq">Preguntas</a>
+        <a href="#instalar">Instalar</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="inicio">
+
+  <!-- Título a ancho completo -->
+  <section class="grid hero-title">
+    <div class="cell">
+      <p class="label">Servidor MCP para Claude Code</p>
+      <h1>Convierte cualquier imagen en una ilustración isométrica</h1>
+    </div>
+  </section>
+
+  <!-- Texto + ilustración -->
+  <section class="grid hero-split">
+    <div class="cell copy">
+      <p class="lead">Pásale a Claude una foto, un boceto o una descripción. CSSketch le da el prompt y la geometría de tres ejes, y devuelve un HTML y SVG editable: cada color, grosor y capa se ajusta con controles.</p>
+      <div>
+        <div class="cta-row">
+          <a class="btn" href="#instalar">Instalar en Claude Code</a>
+          <a class="btn btn--ghost" href="#transformacion">Ver la transformación</a>
+        </div>
+        <p class="micro" style="margin-top:16px">Sin API key · Sin cuenta · El servidor no guarda tus imágenes</p>
+      </div>
+    </div>
+    <div class="cell art">
+      <iframe src="landing/samples/retro-pc.html" title="Ilustración isométrica de una computadora retro, generada con CSSketch" loading="eager"></iframe>
+    </div>
+  </section>
+
+  <!-- Transformación: 4 celdas -->
+  <section id="transformacion" class="grid band">
+    <div class="cell">
+      <div class="tile">
+        <img src="landing/foto-computadora.jpg" alt="Foto en perspectiva de una computadora retro beige con su teclado" loading="lazy">
+      </div>
+      <div class="caption"><span>01 Entrada</span><span>Foto</span></div>
+    </div>
+    <div class="cell">
+      <div class="tile">
+        <iframe src="landing/samples/retro-pc.html" title="Salida: computadora retro en isométrico" loading="lazy"></iframe>
+      </div>
+      <div class="caption"><span>02 Salida</span><span>HTML + SVG</span></div>
+    </div>
+    <div class="cell">
+      <div class="tile">
+        <iframe src="landing/samples/lupa.html" title="Ejemplo: lupa isométrica" loading="lazy"></iframe>
+      </div>
+      <div class="caption"><span>03 Ejemplo</span><span>Lupa</span></div>
+    </div>
+    <div class="cell note">
+      <p class="muted" style="margin:0">La referencia no tiene que ser isométrica. Claude identifica los objetos, los reconstruye como sólidos en tres ejes y conserva proporciones, paleta y orden de capas.</p>
+      <p style="margin:0"><strong>Foto → isométrico</strong> en una sola llamada.</p>
+    </div>
+  </section>
+
+  <!-- Cómo funciona -->
+  <section id="como-funciona">
+    <div class="grid section-head">
+      <div class="cell">
+        <p class="label"><span class="num">01</span>Cómo funciona</p>
+        <h2>Tres pasos dentro de Claude Code</h2>
+      </div>
+      <div class="cell">
+        <p class="side">Sin compilar nada: un comando, una imagen o una descripción, y la validación ocurre en el mismo chat.</p>
+      </div>
+    </div>
+    <div class="grid steps">
+      <div class="cell">
+        <span class="step-n">01</span>
+        <div>
+          <h3>Instala el servidor</h3>
+          <p class="muted" style="margin:10px 0 0">Un comando agrega CSSketch como servidor MCP HTTP.</p>
+        </div>
+      </div>
+      <div class="cell">
+        <span class="step-n">02</span>
+        <div>
+          <h3>Pide la ilustración</h3>
+          <p class="muted" style="margin:10px 0 0">Adjunta una imagen o describe la escena: “una taza de café y un teléfono, line-art monocromo”.</p>
+        </div>
+      </div>
+      <div class="cell">
+        <span class="step-n">03</span>
+        <div>
+          <h3>Claude dibuja y valida</h3>
+          <p class="muted" style="margin:10px 0 0">Claude escribe el HTML con el prompt del servidor, lo valida contra el canon isométrico y te da un enlace para editarlo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Instalar: bloque invertido -->
+  <section id="instalar" class="install-block">
+    <div class="grid section-head">
+      <div class="cell">
+        <p class="label"><span class="num">02</span>Instalación</p>
+        <h2>Agrégalo a Claude Code en un comando</h2>
+      </div>
+      <div class="cell">
+        <p class="side" style="color:#cfcfcf">Un comando para Claude Code. Para otros clientes MCP, usa la configuración de abajo.</p>
+      </div>
+    </div>
+    <div class="grid install-cols">
+      <div class="cell">
+        <p class="muted">Ejecuta esto en tu terminal:</p>
+        <pre class="code"><code id="cmd-cli">claude mcp add --transport http cssketch https://cssketch.netlify.app/mcp</code></pre>
+        <button class="copy" type="button" data-copy="cmd-cli">Copiar comando</button>
+
+        <p class="muted" style="margin-top:32px">¿Usas otro cliente MCP? Agrega esta configuración:</p>
+        <pre class="code"><code id="cmd-json">{
+  "mcpServers": {
+    "cssketch": {
+      "type": "http",
+      "url": "https://cssketch.netlify.app/mcp"
+    }
+  }
+}</code></pre>
+        <button class="copy" type="button" data-copy="cmd-json">Copiar configuración</button>
+      </div>
+      <div class="cell">
+        <p class="muted">Herramientas que expone el servidor:</p>
+        <table>
+          <thead><tr><th>Herramienta</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td><code>cssketch_prompt</code></td><td>Prompt isométrico a partir de descripciones de texto.</td></tr>
+            <tr><td><code>cssketch_start</code></td><td>Prompt + imágenes (base64) para que Claude dibuje.</td></tr>
+            <tr><td><code>cssketch_validate</code></td><td>Valida el HTML y devuelve el enlace para editarlo.</td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="margin-top:18px">Para verificar: pide en Claude “lista las herramientas de cssketch”.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Preguntas -->
+  <section id="faq">
+    <div class="grid section-head">
+      <div class="cell">
+        <p class="label"><span class="num">03</span>Preguntas</p>
+        <h2>Lo que conviene saber antes de instalarlo</h2>
+      </div>
+      <div class="cell"></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr;">
+      <div class="cell" style="padding:0 28px;">
+        <details>
+          <summary>¿Necesito una API key de IA?</summary>
+          <p>No. El servidor solo prepara el prompt, las imágenes y la validación. Quien dibuja es el cliente que lo llama, por ejemplo Claude Code.</p>
+        </details>
+        <details>
+          <summary>¿Mis imágenes se guardan?</summary>
+          <p>No. El servidor es stateless: no guarda imágenes ni HTML. Las imágenes viajan solo en la llamada a la herramienta.</p>
+        </details>
+        <details>
+          <summary>¿La referencia tiene que ser isométrica?</summary>
+          <p>No. Una foto, un boceto o una vista frontal sirven. Claude reconstruye los objetos en el canon isométrico y conserva proporciones y paleta.</p>
+        </details>
+        <details>
+          <summary>¿Qué formato entrega?</summary>
+          <p>Un único documento HTML con un bloque de estilos y un SVG inline. Las variables de color, grosor y estilo quedan expuestas para editarlas sin tocar el código.</p>
+        </details>
+        <details>
+          <summary>¿Qué hace el validador?</summary>
+          <p>Revisa que la geometría esté en la cuadrícula de 30°, que el orden de capas sea coherente y que no haya dependencias externas. Si algo falla, te dice qué arista o capa corregir.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="grid">
+    <div class="cell">
+      <a class="credit" href="https://kitifica.com" target="_blank" rel="noopener">
+        <span>Diseñada por</span>
+        <img src="landing/logo_kitifica.svg" alt="Kitifica" width="136" height="36">
+      </a>
+      <nav class="foot-links" aria-label="Pie">
+        <a href="https://github.com/kitifica-max/cssketch" target="_blank" rel="noopener">Código en GitHub</a>
+        <a href="https://kitifica.com" target="_blank" rel="noopener">kitifica.com</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Copiar comandos: si el portapapeles no está disponible, el texto sigue visible para copiarlo a mano.
+  document.querySelectorAll('[data-copy]').forEach((btn) => {
+    btn.dataset.label = btn.textContent;
+    btn.addEventListener('click', async () => {
+      const src = document.getElementById(btn.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(src.textContent);
+        btn.textContent = 'Copiado';
+      } catch (e) {
+        btn.textContent = 'Selecciónalo y copia';
+      }
+      setTimeout(() => (btn.textContent = btn.dataset.label), 1600);
+    });
+  });
+</script>
+</body>
+</html>
