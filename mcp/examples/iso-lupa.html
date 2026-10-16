@@ -101,11 +101,13 @@ html, body { margin: 0; background: var(--paper); }
       </g>
     </g>
 
-    <!-- Z4 · Mango: tubo a lo largo de -V (30°) -->
+    <!-- Z4 · Mango: cilindro de radio 12 a lo largo de -V. Eje A(246,244) → B(338,297).
+         Siluetas: A±o y B±o con o = (0.612r, -1.061r). Tapa B: círculo en plano U-W
+         = matrix(0.866r, -0.5r, 0, -r, Bx, By). -->
     <g data-z="4" id="handle">
-      <rect class="ln" x="0" y="-12" width="106" height="24" rx="4" transform="translate(246 244) rotate(30)"/>
-      <ellipse class="ln" cx="338" cy="297" rx="11" ry="22" transform="rotate(30 338 297)"/>
-      <ellipse class="thin" cx="338" cy="297" rx="5" ry="11" transform="rotate(30 338 297)"/>
+      <path class="ln" d="M253.3 231.3 L345.1 284.3 L330.5 309.7 L238.7 256.7 Z"/>
+      <circle class="ln" r="1" transform="matrix(10.39 -6 0 -12 337.8 297)" vector-effect="non-scaling-stroke"/>
+      <circle class="thin" r="1" transform="matrix(6.06 -3.5 0 -7 337.8 297)" vector-effect="non-scaling-stroke"/>
     </g>
 
     <!-- Z5 · Lupa: aro en el plano del suelo (elipse ry/rx = 0.577) -->

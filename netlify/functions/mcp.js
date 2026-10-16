@@ -4,10 +4,14 @@
    nuevos (Netlify Functions es aislado por invocación), con
    enableJsonResponse para responder JSON plano sin SSE.
 
+   El motor de generación es el cliente (p. ej. Claude Code). Este
+   servidor no llama a ninguna API de IA: prepara el prompt y las
+   imágenes, y valida el HTML que el cliente escribe.
+
    Tools HTTP:
-     cssketch_prompt   → Prompt Técnico Maestro (el agente ya vio las imágenes)
-     cssketch_validate → validación + manifest + fragmento #d=
-     cssketch_generate → fallback Anthropic (solo con ANTHROPIC_API_KEY)
+     cssketch_prompt   → Prompt Técnico Maestro (descripciones en texto)
+     cssketch_start    → Prompt + imágenes (base64) para que el cliente genere
+     cssketch_validate → validación + manifest + uiUrl con el arte embebido
    ═══════════════════════════════════════════════════════════ */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -17,57 +21,10 @@ import { z } from 'zod';
 import { buildPrompt } from '../../mcp/prompt.js';
 import { validateArt, buildFragment } from '../../mcp/validate.js';
 
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
-const MODEL = process.env.CSSKETCH_MODEL || 'claude-sonnet-4-5';
-
-/* ── helper: content blocks de texto ────────────────────── */
+/* ── helper: content blocks ─────────────────────────────── */
 const text = (s) => ({ type: 'text', text: s });
+const image = (data, mimeType) => ({ type: 'image', data, mimeType });
 const json = (obj) => text(JSON.stringify(obj, null, 2));
-const toolError = (message) => ({ content: [text(`Error: ${message}`)], isError: true });
-
-/* ── fallback Anthropic ─────────────────────────────────── */
-async function callAnthropic({ sketchB64, refB64, mediaType, hint }) {
-  const prompt = buildPrompt({ sketch: 'boceto (imagen adjunta)', ref: 'referencia (imagen adjunta)', hint });
-
-  const body = {
-    model: MODEL,
-    max_tokens: 8000,
-    system: prompt,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'image', source: { type: 'base64', media_type: mediaType, data: sketchB64 } },
-        { type: 'image', source: { type: 'base64', media_type: mediaType, data: refB64 } },
-        { type: 'text', text: 'Genera el CSS Art siguiendo el Prompt Técnico Maestro. Devuelve solo el documento HTML autocontenido.' },
-      ],
-    }],
-  };
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Anthropic ${res.status}: ${errText.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
-  const html = (data.content || [])
-    .filter((b) => b.type === 'text')
-    .map((b) => b.text)
-    .join('\n')
-    .trim();
-
-  if (!html) throw new Error('Anthropic no devolvió HTML.');
-  return html;
-}
 
 /* ── servidor por request ───────────────────────────────── */
 function buildServer() {
@@ -78,12 +35,13 @@ function buildServer() {
     {
       title: 'CSSketch · prompt de generación',
       description:
-        'Devuelve el Prompt Técnico Maestro condicionado por las descripciones del boceto (estructura) y ' +
-        'la referencia (estilo). Usa este prompt para generar un CSS Art autocontenido con <style> y :root paramétrico.',
+        'Devuelve el Prompt Técnico Maestro isométrico condicionado por las descripciones del boceto ' +
+        '(estructura) y la referencia (estilo, puede no ser isométrica). Sin referencia, basta la indicación. ' +
+        'Quien llama escribe el HTML con este prompt y lo valida con cssketch_validate.',
       inputSchema: {
         sketch: z.string().optional().describe('Descripción del boceto (estructura).'),
-        ref: z.string().optional().describe('Descripción de la referencia (estilo).'),
-        hint: z.string().optional().describe('Indicación opcional (tono, paleta, época).'),
+        ref: z.string().optional().describe('Descripción de la referencia (estilo y forma).'),
+        hint: z.string().optional().describe('Indicación opcional (objetos, paleta, estilo line-art | flat-tone).'),
       },
     },
     async ({ sketch, ref, hint }) => ({
@@ -92,12 +50,45 @@ function buildServer() {
   );
 
   server.registerTool(
+    'cssketch_start',
+    {
+      title: 'CSSketch · prompt + imágenes',
+      description:
+        'Devuelve el Prompt Técnico Maestro isométrico junto con las imágenes en base64 (boceto y/o referencia). ' +
+        'No llama a ninguna API: quien llama (p. ej. Claude Code) ve las imágenes, escribe el HTML con el ' +
+        'prompt y lo valida con cssketch_validate. Sin imágenes, pasa al menos hint.',
+      inputSchema: {
+        sketch_b64: z.string().optional().describe('Boceto en base64 (sin prefijo data:). Opcional.'),
+        ref_b64: z.string().optional().describe('Referencia en base64 (sin prefijo data:). Opcional; no tiene que ser isométrica.'),
+        media_type: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+          .optional().describe('Tipo MIME de las imágenes. Default image/png.'),
+        hint: z.string().optional().describe('Indicación del usuario. Obligatoria si no hay imágenes.'),
+      },
+    },
+    async ({ sketch_b64, ref_b64, media_type, hint }) => {
+      if (!sketch_b64 && !ref_b64 && !hint) {
+        return { content: [text('Error: sin imágenes ni indicación: pasa sketch_b64, ref_b64 o hint.')], isError: true };
+      }
+      const mime = media_type || 'image/png';
+      const prompt = buildPrompt({
+        sketch: sketch_b64 ? 'boceto (imagen adjunta)' : undefined,
+        ref: ref_b64 ? 'referencia (imagen adjunta)' : undefined,
+        hint,
+      });
+      const blocks = [text(prompt)];
+      if (sketch_b64) blocks.push(image(sketch_b64, mime));
+      if (ref_b64) blocks.push(image(ref_b64, mime));
+      return { content: blocks };
+    }
+  );
+
+  server.registerTool(
     'cssketch_validate',
     {
       title: 'CSSketch · validar arte',
       description:
         'Valida un CSS Art contra el contrato del Prompt Técnico Maestro y devuelve informe + manifest de ' +
-        'variables + fragmento #d=<base64> para abrirlo en la UI sin storage.',
+        'variables + uiUrl con el arte embebido en #d=<base64> para abrirlo en la UI sin storage.',
       inputSchema: {
         html: z.string().min(1).describe('Documento HTML autocontenido con <style> y :root.'),
       },
@@ -123,50 +114,6 @@ function buildServer() {
       };
     }
   );
-
-  // registro condicional del fallback (solo con API key)
-  if (ANTHROPIC_KEY) {
-    server.registerTool(
-      'cssketch_generate',
-      {
-        title: 'CSSketch · generar con IA (fallback)',
-        description:
-          'Genera un CSS Art desde dos imágenes (boceto y referencia) usando la API de Anthropic. ' +
-          'Solo disponible si el servidor tiene ANTHROPIC_API_KEY configurada. Devuelve el HTML validado.',
-        inputSchema: {
-          sketch_b64: z.string().min(1).describe('Boceto en base64 (sin prefijo data:).'),
-          ref_b64: z.string().min(1).describe('Referencia en base64 (sin prefijo data:).'),
-          media_type: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
-            .optional().describe('Tipo MIME de ambas imágenes. Default image/png.'),
-          hint: z.string().optional().describe('Indicación opcional (tono, paleta, época).'),
-        },
-      },
-      async ({ sketch_b64, ref_b64, media_type, hint }) => {
-        try {
-          const html = await callAnthropic({
-            sketchB64: sketch_b64,
-            refB64: ref_b64,
-            mediaType: media_type || 'image/png',
-            hint,
-          });
-          const report = validateArt(html);
-          return {
-            content: [json({
-              ok: report.ok,
-              warnings: report.warnings,
-              variables: report.variables.length,
-              nodes: report.stats.nodes,
-              html,
-              uiUrl: `${process.env.URL || 'https://cssketch.netlify.app'}/${buildFragment(html)}`,
-            })],
-            isError: !report.ok,
-          };
-        } catch (err) {
-          return toolError(`Fallo al generar: ${err.message}`);
-        }
-      }
-    );
-  }
 
   return server;
 }

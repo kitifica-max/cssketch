@@ -49,7 +49,7 @@ Registro en `~/.claude.json`:
 |------|------|
 | `cssketch_prompt(sketch, ref, hint?)` | Devuelve el Prompt Técnico Maestro |
 | `cssketch_validate(html)` | Valida + manifest + `uiUrl` con el arte embebido en `#d=<base64>` |
-| `cssketch_generate(sketch_b64, ref_b64, …)` | Fallback Anthropic (solo si `ANTHROPIC_API_KEY` está seteada) |
+| `cssketch_start(sketch_b64?, ref_b64?, hint?)` | Devuelve prompt + imágenes; el cliente (Claude Code) genera el HTML. Sin API de IA en el servidor |
 
 Registro:
 
@@ -111,8 +111,6 @@ netlify/functions/
 
 ## Variables de entorno (solo la function HTTP)
 
-- `ANTHROPIC_API_KEY` — habilita `cssketch_generate` (fallback)
-- `CSSKETCH_MODEL` — modelo Anthropic (default `claude-sonnet-4-5`)
 - `URL` — base del `uiUrl` devuelto por validate/generate
 
 ## Desarrollo
