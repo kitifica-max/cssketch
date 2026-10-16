@@ -60,7 +60,7 @@ Z (atrás→delante):
   <rect width="480" height="480" fill="var(--bg)"></rect>
 
   <!-- ── SCENE: G=25px, origen en P000=(240,440) ── -->
-  <g id="scene" transform="translate(240,440) scale(25)">
+  <g id="scene" transform="translate(240,395) scale(25)">
 
     <!-- ── Sombra en plano suelo (U-V desde offset (-0.4,0.25)) ── -->
     <g data-z="1" transform="matrix(0.866,-0.5, -0.866,-0.5, -0.4,0.25)">
@@ -160,6 +160,60 @@ Z (atrás→delante):
       <rect x="0" y="0" width="0.38" height="5.00" fill="#A8A498" opacity="0.25"></rect>
       <!-- Sombra borde trasero -->
       <rect x="0" y="4.60" width="6.00" height="0.40" fill="#B8B2A0" opacity="0.22"></rect>
+    </g>
+
+    <!-- Z8 · Teclado: losa en el suelo, frente a la pantalla (lado U-W). Esquina (a=0.2, b=-4.2), 5.5 × 2.5, grosor 0.5 -->
+    <g data-z="8">
+      <rect x="0" y="0" width="5.5" height="2.5" fill="var(--sombra)" opacity="0.22" transform="matrix(0.866,-0.5,-0.866,-0.5,3.37,1.3)"></rect>
+      <rect x="0" y="0" width="5.5" height="0.5" fill="var(--body-right)" class="sf" transform="matrix(0.866,-0.5,0,-1,3.12,1.6)"></rect>
+      <rect x="0" y="0" width="2.5" height="0.5" fill="var(--body-left)" class="sf" transform="matrix(-0.866,-0.5,0,-1,3.12,1.6)"></rect>
+      <rect x="0" y="0" width="5.5" height="2.5" rx="0.12" fill="var(--body-top)" class="sf" transform="matrix(0.866,-0.5,-0.866,-0.5,3.12,1.1)"></rect>
+      <g transform="matrix(0.866,-0.5,-0.866,-0.5,3.12,1.1)">
+          <rect class="sf2" x="0.18" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="0.65" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.12" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.59" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.06" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.53" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.00" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.47" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.94" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.41" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.88" y="0.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="0.18" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="0.65" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.12" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.59" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.06" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.53" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.00" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.47" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.94" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.41" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.88" y="0.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="0.18" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="0.65" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.12" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.59" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.06" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.53" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.00" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.47" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.94" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.41" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.88" y="1.22" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="0.18" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="0.65" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.12" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="1.59" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.06" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="2.53" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.00" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.47" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="3.94" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.41" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+          <rect class="sf2" x="4.88" y="1.72" width="0.36" height="0.36" rx="0.05" fill="#F4F0E6"></rect>
+      </g>
     </g>
 
   </g><!-- /scene -->

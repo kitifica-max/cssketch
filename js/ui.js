@@ -1,10 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
    ui.js  ·  entrypoint
-   Drag & drop, transiciones entre pasos, generación dinámica
-   de controles y orquestación entre api-mock, parser y renderer.
+   Editor de la ilustración: carga desde el enlace de Claude Code,
+   controles dinámicos, editor de elementos y exportación.
    ═══════════════════════════════════════════════════════════ */
 
-import { analyzeImages, generateCode } from './api-mock.js';
 import { parseVariables, formatValue, prettify } from './parser.js';
 import * as renderer from './renderer.js';
 import * as elementEditor from './element-editor.js';
@@ -13,17 +12,9 @@ import { loadArtFromHash } from './art-loader.js';
 /* ── estado ──────────────────────────────────────────────── */
 
 const state = {
-  step: 1,
-  maxStep: 1,
-  sketch: null,
-  ref: null,
-  sketchURL: null,
-  refURL: null,
-  prompt: '',
   vars: [],
   originals: new Map(),   // name → valor original
   refs: new Map(),        // name → { inputs:[], valueEl }
-  built: false,
   editMode: false,
 };
 
@@ -36,23 +27,11 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const el = {};
 function cacheNodes() {
-  el.app          = $('#app');
-  el.steps        = $$('.step');
-  el.stepItems    = $$('.stepper__item');
-  el.rails        = $$('.stepper__rail');
   el.toast        = $('#toast');
+  el.empty        = $('#empty');
+  el.workspace    = $('#workspace');
   el.statusLeft   = $('#status-left');
 
-  el.dropSketch   = $('#drop-sketch');
-  el.dropRef      = $('#drop-ref');
-  el.btnTo2       = $('#btn-to-2');
-  el.btnAnalyze   = $('#btn-analyze');
-  el.btnReanaly   = $('#btn-reanalyze');
-  el.btnBuild     = $('#btn-build');
-  el.prompt       = $('#prompt-editor');
-  el.chipChars    = $('#chip-chars');
-  el.chipSketch   = $('[data-chip="sketch"]');
-  el.chipRef      = $('[data-chip="ref"]');
 
   el.frame        = $('#render-frame');
   el.propsBody    = $('#props-body');
@@ -65,7 +44,6 @@ function cacheNodes() {
   el.btnReload    = $('#btn-reload');
   el.btnCopy      = $('#btn-copy');
   el.btnDownload  = $('#btn-download');
-  el.btnResetApp  = $('#btn-reset-app');
 
   el.btnEditMode  = $('#btn-edit-mode');
   el.selPanel     = $('#sel-panel');
@@ -93,14 +71,6 @@ function setStatus(text, kind = '') {
   el.statusLeft.textContent = text;
   el.statusLeft.classList.toggle('is-busy', kind === 'busy');
   el.statusLeft.classList.toggle('is-err', kind === 'err');
-}
-
-function setStepStatus(n, text, kind = '') {
-  const node = $(`[data-status="${n}"]`);
-  if (!node) return;
-  node.textContent = text;
-  node.classList.remove('is-ok', 'is-err', 'is-busy');
-  if (kind) node.classList.add(`is-${kind}`);
 }
 
 function busy(btn, on, label) {
@@ -134,224 +104,10 @@ function expandHex(v) {
 
 /* ── transición de pasos ─────────────────────────────────── */
 
-function goto(step) {
-  if (step > state.maxStep) return;
-  state.step = step;
-
-  for (const s of el.steps) {
-    s.classList.toggle('is-active', Number(s.dataset.step) === step);
-  }
-
-  el.stepItems.forEach((item, i) => {
-    const n = i + 1;
-    item.classList.toggle('is-active', n === step);
-    item.classList.toggle('is-done', n < step);
-    item.disabled = n > state.maxStep;
-  });
-
-  el.rails.forEach((rail, i) => {
-    rail.classList.toggle('is-done', i + 2 <= state.maxStep);
-  });
-
-  el.app.dataset.step = String(step);
-  setStatus(
-    ['', 'paso 1 · subir boceto', 'paso 2 · subir referencia',
-     'paso 3 · plan de construcción', 'paso 4 · workspace'][step]
-  );
-}
-
-function unlock(step) {
-  if (step > state.maxStep) {
-    state.maxStep = step;
-    goto(state.step);   // refresca estados del stepper
-  }
-}
-
-/* ── drag & drop ─────────────────────────────────────────── */
-
-function setupDrop(zone) {
-  const input = $('input[type="file"]', zone);
-  const key = zone.id === 'drop-sketch' ? 'sketch' : 'ref';
-
-  const open = () => input.click();
-
-  zone.addEventListener('click', (e) => {
-    if (e.target.closest('[data-clear]')) return;
-    if (zone.classList.contains('has-file')) return;
-    open();
-  });
-
-  zone.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      if (!zone.classList.contains('has-file')) open();
-    }
-  });
-
-  input.addEventListener('change', () => {
-    if (input.files && input.files[0]) acceptFile(zone, key, input.files[0]);
-    input.value = '';
-  });
-
-  ['dragenter', 'dragover'].forEach((type) => {
-    zone.addEventListener(type, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      zone.classList.add('is-drag');
-    });
-  });
-
-  ['dragleave', 'dragend'].forEach((type) => {
-    zone.addEventListener(type, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // sólo salir si el puntero salió realmente de la zona
-      if (type === 'dragleave' && zone.contains(e.relatedTarget)) return;
-      zone.classList.remove('is-drag');
-    });
-  });
-
-  zone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    zone.classList.remove('is-drag');
-    const file = e.dataTransfer && e.dataTransfer.files
-      ? e.dataTransfer.files[0]
-      : null;
-    if (file) acceptFile(zone, key, file);
-  });
-
-  const clearBtn = $('[data-clear]', zone);
-  if (clearBtn) {
-    clearBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      clearFile(zone, key);
-    });
-  }
-}
-
-function acceptFile(zone, key, file) {
-  if (!file.type.startsWith('image/')) {
-    toast(`"${file.name}" no es una imagen`, true);
-    setStepStatus(key === 'sketch' ? 1 : 2, 'Formato no soportado.', 'err');
-    return;
-  }
-
-  if (state[`${key}URL`]) URL.revokeObjectURL(state[`${key}URL`]);
-
-  state[key] = file;
-  state[`${key}URL`] = URL.createObjectURL(file);
-
-  $('img', zone).src = state[`${key}URL`];
-  $('.drop__name', zone).textContent = file.name;
-  $('.drop__meta', zone).textContent = `${fmtBytes(file.size)} · ${file.type.replace('image/', '').toUpperCase()}`;
-  zone.classList.add('has-file');
-
-  const ready = !!state.sketch;
-  el.btnTo2.disabled = !ready;
-  el.btnAnalyze.disabled = !(state.sketch && state.ref);
-
-  if (key === 'sketch') unlock(2);   // el boceto habilita el paso 2
-
-  setStepStatus(
-    key === 'sketch' ? 1 : 2,
-    `✓ ${file.name} cargado`,
-    'ok'
-  );
-  updateChips();
-}
-
-function clearFile(zone, key) {
-  if (state[`${key}URL`]) URL.revokeObjectURL(state[`${key}URL`]);
-  state[key] = null;
-  state[`${key}URL`] = null;
-  zone.classList.remove('has-file');
-  $('img', zone).removeAttribute('src');
-
-  el.btnTo2.disabled = !state.sketch;
-  el.btnAnalyze.disabled = true;
-  setStepStatus(key === 'sketch' ? 1 : 2,
-    key === 'sketch' ? 'Esperando imagen del boceto…' : 'Esperando imagen de referencia…');
-
-  if (key === 'sketch' && state.maxStep === 2) {
-    state.maxStep = 1;
-    if (state.step === 2) goto(1); else goto(state.step);
-  }
-  updateChips();
-}
-
-function updateChips() {
-  el.chipSketch.textContent = state.sketch ? `boceto: ${state.sketch.name}` : 'boceto: —';
-  el.chipRef.textContent    = state.ref ? `ref: ${state.ref.name}` : 'ref: —';
-}
-
-/* ── flujo analizar → prompt ─────────────────────────────── */
-
-async function runAnalysis() {
-  if (!state.sketch || !state.ref) return;
-  busy(el.btnAnalyze, true, 'Analizando…');
-  setStatus('analizando imágenes…', 'busy');
-  setStepStatus(2, 'Extrayendo estructura y estilo…', 'busy');
-
-  try {
-    const prompt = await analyzeImages(state.sketch, state.ref);
-    state.prompt = prompt;
-    el.prompt.value = prompt;
-    updateCharCount();
-
-    setStepStatus(2, '✓ análisis completo', 'ok');
-    setStepStatus(3, 'Plan listo. Edítalo libremente.', 'ok');
-    unlock(3);
-    goto(3);
-    toast('Prompt Técnico Maestro generado');
-    setStatus('paso 3 · plan de construcción');
-  } catch (err) {
-    console.error(err);
-    setStepStatus(2, 'Error al analizar.', 'err');
-    setStatus('error en el análisis', 'err');
-    toast(String(err.message || err), true);
-  } finally {
-    busy(el.btnAnalyze, false);
-  }
-}
-
-function updateCharCount() {
-  const v = el.prompt.value;
-  el.chipChars.textContent = `${v.length} car. · ${v.split('\n').length} líneas`;
-}
-
-/* ── flujo construir → render ────────────────────────────── */
-
-async function runBuild() {
-  const prompt = el.prompt.value.trim();
-  if (!prompt) {
-    toast('El prompt está vacío', true);
-    return;
-  }
-  state.prompt = prompt;
-
-  busy(el.btnBuild, true, 'Generando…');
-  setStatus('generando código…', 'busy');
-  setStepStatus(3, 'Renderizando el documento…', 'busy');
-
-  try {
-    const html = await generateCode(prompt);
-    mountArt(html);
-  } catch (err) {
-    console.error(err);
-    setStepStatus(3, 'Error al generar.', 'err');
-    setStatus('error al generar', 'err');
-    toast(String(err.message || err), true);
-  } finally {
-    busy(el.btnBuild, false);
-  }
-}
-
 /**
- * Monta un documento CSS Art en el workspace: parsea variables,
- * construye controles, renderiza en el sandbox y salta al paso 4.
- * Compartido por el flujo generado (runBuild) y la carga desde
- * fragmento de URL (art-loader).
+ * Monta un documento CSS Art en el editor: parsea variables,
+ * construye controles y renderiza en el sandbox.
+ * Lo usa la carga desde el enlace de Claude Code (art-loader).
  */
 function mountArt(html, { source = 'generated' } = {}) {
   const vars = parseVariables(html);
@@ -368,14 +124,9 @@ function mountArt(html, { source = 'generated' } = {}) {
 
   buildControls(vars);
   renderer.render(html);
-  state.built = true;
 
-  unlock(4);
-  goto(4);
-
-  setStepStatus(3, '✓ ilustración construida', 'ok');
-  setStepStatus(4, `${vars.length} variables · ${renderer.countNodes()} nodos`, 'ok');
-  setStatus('workspace activo');
+  showWorkspace(true);
+  setStatus(`${vars.length} variables · ${renderer.countNodes()} nodos`, 'ok');
   toast(
     source === 'art'
       ? `Arte cargado: ${vars.length} variables editables`
@@ -819,49 +570,16 @@ function downloadHTML() {
   toast('Descarga iniciada');
 }
 
-function resetApp() {
-  if (state.editMode) setEditMode(false);
-  if (state.sketchURL) URL.revokeObjectURL(state.sketchURL);
-  if (state.refURL) URL.revokeObjectURL(state.refURL);
-
-  state.sketch = state.ref = null;
-  state.sketchURL = state.refURL = null;
-  state.prompt = '';
-  state.vars = [];
-  state.built = false;
-  state.originals.clear();
-  state.refs.clear();
-  state.maxStep = 1;
-
-  for (const zone of [el.dropSketch, el.dropRef]) {
-    zone.classList.remove('has-file', 'is-drag');
-    $('img', zone).removeAttribute('src');
-  }
-  el.prompt.value = '';
-  updateCharCount();
-  updateChips();
-
-  el.btnTo2.disabled = true;
-  el.btnAnalyze.disabled = true;
-  el.propsBody.textContent = '';
-  el.propsCount.textContent = '0';
-  el.frame.removeAttribute('srcdoc');
-  el.frameMeta.textContent = '—';
-  el.frameFps.textContent = '—';
-
-  setStepStatus(1, 'Esperando imagen del boceto…');
-  setStepStatus(2, 'Esperando imagen de referencia…');
-  setStepStatus(3, 'Edita el plan cuando quieras.');
-  setStepStatus(4, '—');
-
-  goto(1);
-  toast('Sesión reiniciada');
-}
-
 /* ── init ────────────────────────────────────────────────── */
+
+function showWorkspace(on) {
+  el.workspace.classList.toggle('is-active', on);
+  el.empty.hidden = on;
+}
 
 function init() {
   cacheNodes();
+  showWorkspace(false);
 
   renderer.init(el.frame);
   renderer.onEvent((evt) => {
@@ -869,9 +587,7 @@ function init() {
       el.frameMeta.textContent = `${evt.nodes} nodos DOM · srcdoc aislado`;
       const n = Object.keys(renderer.getApplied()).length;
       el.frameFps.textContent = n ? `${n} override(s) activas` : 'sin overrides';
-      if (state.built) {
-        setStepStatus(4, `${state.vars.length} variables · ${evt.nodes} nodos`, 'ok');
-      }
+      if (state.vars.length) setStatus(`${state.vars.length} variables · ${evt.nodes} nodos`, 'ok');
       // readjunta el editor de elementos si el modo quedó activo
       if (state.editMode) {
         attachEditor();
@@ -882,42 +598,11 @@ function init() {
 
   renderer.bindControls(el.propsBody, { onBefore, onAfter });
 
-  setupDrop(el.dropSketch);
-  setupDrop(el.dropRef);
-
-  // navegación (stepper + botones data-goto)
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-goto]');
-    if (!btn) return;
-    e.preventDefault();
-    const target = Number(btn.dataset.goto);
-    if (Number.isFinite(target)) goto(target);
-  });
-
-  el.prompt.addEventListener('input', updateCharCount);
-  el.btnTo2.addEventListener('click', () => goto(2));
-  el.btnAnalyze.addEventListener('click', runAnalysis);
-  el.btnBuild.addEventListener('click', runBuild);
-  el.btnReanaly.addEventListener('click', async () => {
-    if (!state.sketch || !state.ref) return toast('Faltan imágenes', true);
-    busy(el.btnReanaly, true, '…');
-    try {
-      const p = await analyzeImages(state.sketch, state.ref);
-      state.prompt = p;
-      el.prompt.value = p;
-      updateCharCount();
-      toast('Plan regenerado');
-    } finally {
-      busy(el.btnReanaly, false);
-    }
-  });
-
   el.btnResetVars.addEventListener('click', resetVars);
   el.btnCollapse.addEventListener('click', toggleCollapseAll);
   el.btnReload.addEventListener('click', () => { renderer.reload(); toast('Sandbox recargado'); });
   el.btnCopy.addEventListener('click', copyHTML);
   el.btnDownload.addEventListener('click', downloadHTML);
-  el.btnResetApp.addEventListener('click', resetApp);
 
   // editor de elementos (modo vectorial)
   el.btnEditMode.addEventListener('click', () => setEditMode(!state.editMode));
@@ -937,18 +622,7 @@ function init() {
   el.btnSelDown.addEventListener('click', () => editorCtl?.moveLayer(-1));
   el.btnSelUp.addEventListener('click', () => editorCtl?.moveLayer(1));
 
-  // atajos: Cmd/Ctrl+Enter ejecuta el plan
-  document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && state.step === 3) {
-      e.preventDefault();
-      runBuild();
-    }
-  });
-
-  updateChips();
-  updateCharCount();
-  goto(1);
-  setStatus('listo · arrastra un boceto para empezar');
+  setStatus('sin ilustración · pídela en Claude Code');
 
   // si la URL trae un arte embebido (#arte=<nombre> o #d=<base64>), lo monta
   loadFromFragment();

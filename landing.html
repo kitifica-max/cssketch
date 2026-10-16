@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CSSketch · Ilustraciones isométricas desde tu imagen</title>
 <meta name="description" content="Servidor MCP que convierte cualquier imagen o descripción en una ilustración isométrica editable en HTML y SVG. Se instala en Claude Code en un comando.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   --ink: #000000;
-  --paper: #ffffff;
+  --paper: #e5ddd0;
   --grey: #4d4d4d;
-  --soft: #f2f2f2;
+  --soft: #efe9de;
   --font-head: "Orbitron", "Arial Black", sans-serif;
   --font-body: "Jost", "Futura", "Helvetica Neue", Arial, sans-serif;
 }
@@ -83,16 +84,19 @@ nav.links a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .hero-title { grid-template-columns: 1fr; }
 .hero-title .cell { padding: 36px 28px 40px; }
 .hero-split { grid-template-columns: 1fr 1fr; }
-.hero-split .copy { display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
+.hero-split .hero-copy { display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
 .lead { font-size: 1.2rem; max-width: 44ch; margin: 0; }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .cta-row .btn { min-width: 240px; }
 .micro { font-size: 0.9rem; color: var(--grey); margin: 0; }
 .hero-split .art { padding: 0; }
-.hero-split .art iframe { width: 100%; aspect-ratio: 1 / 1; border: 0; background: var(--soft); }
 
 /* ── Banda de transformación: 4 celdas ── */
-.band { grid-template-columns: repeat(4, 1fr); }
+.band { grid-template-columns: repeat(3, 1fr); }
+.facts { list-style: none; margin: 0; padding: 0; }
+.facts li { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--ink); }
+.facts li:first-child { border-top: 1px solid var(--ink); }
+.facts span:last-child { color: var(--grey); text-align: right; }
 .band .cell { padding: 0; position: relative; }
 .band .tile { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: var(--soft); }
 .band .tile img, .band .tile iframe { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border: 0; display: block; }
@@ -133,7 +137,7 @@ code { font: 0.92em ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 /* ── FAQ ── */
 details { border-bottom: 1px solid var(--ink); padding: 20px 0; }
-details:first-of-type { border-top: 1px solid var(--ink); }
+details:last-of-type { border-bottom: 0; }
 summary { cursor: pointer; font-family: var(--font-head); font-weight: 600; font-size: 1rem; text-transform: uppercase; list-style: none; letter-spacing: 0.02em; }
 summary::-webkit-details-marker { display: none; }
 summary::after { content: "+"; float: right; font-family: var(--font-head); }
@@ -153,6 +157,7 @@ footer .cell { display: flex; align-items: center; justify-content: space-betwee
 @media (max-width: 900px) {
   .hero-split, .section-head, .install-cols { grid-template-columns: 1fr; }
   .band { grid-template-columns: 1fr 1fr; }
+  .band .note { grid-column: 1 / -1; }
   .steps { grid-template-columns: 1fr; }
   .cell { padding: 22px; }
   nav.links a:not(.btn) { display: none; }
@@ -191,20 +196,25 @@ footer .cell { display: flex; align-items: center; justify-content: space-betwee
     </div>
   </section>
 
-  <!-- Texto + ilustración -->
+  <!-- Texto + datos clave -->
   <section class="grid hero-split">
-    <div class="cell copy">
+    <div class="cell hero-copy">
       <p class="lead">Pásale a Claude una foto, un boceto o una descripción. CSSketch le da el prompt y la geometría de tres ejes, y devuelve un HTML y SVG editable: cada color, grosor y capa se ajusta con controles.</p>
       <div>
         <div class="cta-row">
           <a class="btn" href="#instalar">Instalar en Claude Code</a>
           <a class="btn btn--ghost" href="#transformacion">Ver la transformación</a>
         </div>
-        <p class="micro" style="margin-top:16px">Sin API key · Sin cuenta · El servidor no guarda tus imágenes</p>
       </div>
     </div>
-    <div class="cell art">
-      <iframe src="landing/samples/retro-pc.html" title="Ilustración isométrica de una computadora retro, generada con CSSketch" loading="eager"></iframe>
+    <div class="cell">
+      <p class="label">Lo que obtienes</p>
+      <ul class="facts">
+        <li><span>Sin API key</span><span>Usa tu Claude Code</span></li>
+        <li><span>Sin cuenta</span><span>Un solo comando</span></li>
+        <li><span>Sin almacenamiento</span><span>Tus imágenes no se guardan</span></li>
+        <li><span>HTML + SVG editable</span><span>Controles en vivo</span></li>
+      </ul>
     </div>
   </section>
 
@@ -221,12 +231,6 @@ footer .cell { display: flex; align-items: center; justify-content: space-betwee
         <iframe src="landing/samples/retro-pc.html" title="Salida: computadora retro en isométrico" loading="lazy"></iframe>
       </div>
       <div class="caption"><span>02 Salida</span><span>HTML + SVG</span></div>
-    </div>
-    <div class="cell">
-      <div class="tile">
-        <iframe src="landing/samples/lupa.html" title="Ejemplo: lupa isométrica" loading="lazy"></iframe>
-      </div>
-      <div class="caption"><span>03 Ejemplo</span><span>Lupa</span></div>
     </div>
     <div class="cell note">
       <p class="muted" style="margin:0">La referencia no tiene que ser isométrica. Claude identifica los objetos, los reconstruye como sólidos en tres ejes y conserva proporciones, paleta y orden de capas.</p>

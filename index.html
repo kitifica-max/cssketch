@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>CSSketch · Ilustraciones en HTML + CSS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d12'/%3E%3Cpath d='M9 11l-4 5 4 5M23 11l4 5-4 5M18 9l-4 14' stroke='%235eead4' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
 
@@ -19,142 +22,19 @@
     </svg>
     <span class="brand__name">CSS<em>ketch</em></span>
   </a>
-
-  <nav class="stepper" aria-label="Flujo de trabajo">
-    <button class="stepper__item is-active" data-goto="1" type="button">
-      <span class="stepper__dot">1</span><span class="stepper__label">Boceto</span>
-    </button>
-    <span class="stepper__rail" aria-hidden="true"></span>
-    <button class="stepper__item" data-goto="2" type="button">
-      <span class="stepper__dot">2</span><span class="stepper__label">Referencia</span>
-    </button>
-    <span class="stepper__rail" aria-hidden="true"></span>
-    <button class="stepper__item" data-goto="3" type="button">
-      <span class="stepper__dot">3</span><span class="stepper__label">Plan</span>
-    </button>
-    <span class="stepper__rail" aria-hidden="true"></span>
-    <button class="stepper__item" data-goto="4" type="button">
-      <span class="stepper__dot">4</span><span class="stepper__label">Render</span>
-    </button>
-  </nav>
-
-  <div class="topbar__end">
-    <span class="pill">local-first · 0 deps</span>
-    <button class="btn btn--ghost btn--sm" id="btn-reset-app" type="button">Reiniciar</button>
-  </div>
 </header>
 
 <main id="app">
 
-  <!-- ══════════ PASO 1 · SUBIR BOCETO ══════════ -->
-  <section class="step is-active" data-step="1" aria-label="Paso 1: subir boceto">
-    <div class="step__head">
-      <span class="step__eyebrow">Paso 01 / 04</span>
-      <h1 class="step__title">Sube el boceto</h1>
-      <p class="step__sub">La imagen que define la <strong>estructura</strong>: composición, proporciones y silueta de lo que se va a construir.</p>
-    </div>
-
-    <div class="drop" id="drop-sketch" tabindex="0" role="button"
-         aria-label="Zona de carga del boceto. Arrastra una imagen o pulsa para seleccionar.">
-      <input type="file" accept="image/*" hidden>
-      <div class="drop__idle">
-        <svg class="drop__icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M24 32V12m0 0l-8 8m8-8l8 8" stroke="currentColor" stroke-width="2.4"
-                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <path d="M8 30v4a6 6 0 006 6h20a6 6 0 006-6v-4" stroke="currentColor" stroke-width="2.4"
-                stroke-linecap="round" fill="none"/>
-        </svg>
-        <p class="drop__title">Arrastra tu boceto aquí</p>
-        <p class="drop__hint">PNG · JPG · WEBP · SVG — o haz clic para elegir</p>
-      </div>
-      <figure class="drop__preview" hidden>
-        <img alt="Vista previa del boceto">
-        <figcaption>
-          <span class="drop__name"></span>
-          <span class="drop__meta"></span>
-        </figcaption>
-        <button class="btn btn--tiny" type="button" data-clear>Cambiar</button>
-      </figure>
-    </div>
-
-    <footer class="step__foot">
-      <span class="status" data-status="1">Esperando imagen del boceto…</span>
-      <button class="btn btn--primary" id="btn-to-2" type="button" disabled>Continuar</button>
-    </footer>
+  <!-- ══════════ SIN ARTE ══════════ -->
+  <section class="empty" id="empty" aria-label="Sin ilustración cargada">
+    <span class="step__eyebrow">Sin ilustración</span>
+    <h1 class="step__title">Pide tu ilustración en Claude Code</h1>
+    <p class="step__sub">Describe la imagen o adjunta una referencia en Claude Code. Cuando Claude valide el arte, te dará un enlace que abre aquí para editarlo.</p>
   </section>
 
-  <!-- ══════════ PASO 2 · SUBIR REFERENCIA ══════════ -->
-  <section class="step" data-step="2" aria-label="Paso 2: subir referencia">
-    <div class="step__head">
-      <span class="step__eyebrow">Paso 02 / 04</span>
-      <h1 class="step__title">Sube la referencia</h1>
-      <p class="step__sub">La imagen que define el <strong>estilo visual</strong>: paleta, iluminación, textura y nivel de detalle.</p>
-    </div>
-
-    <div class="drop" id="drop-ref" tabindex="0" role="button"
-         aria-label="Zona de carga de la referencia. Arrastra una imagen o pulsa para seleccionar.">
-      <input type="file" accept="image/*" hidden>
-      <div class="drop__idle">
-        <svg class="drop__icon" viewBox="0 0 48 48" aria-hidden="true">
-          <rect x="7" y="11" width="34" height="26" rx="4" stroke="currentColor" stroke-width="2.4" fill="none"/>
-          <circle cx="17" cy="21" r="3.2" fill="currentColor"/>
-          <path d="M9 33l9-8 6 5 5-4 10 8" stroke="currentColor" stroke-width="2.4"
-                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-        <p class="drop__title">Arrastra tu referencia aquí</p>
-        <p class="drop__hint">Paleta · luz · acabado — o haz clic para elegir</p>
-      </div>
-      <figure class="drop__preview" hidden>
-        <img alt="Vista previa de la referencia">
-        <figcaption>
-          <span class="drop__name"></span>
-          <span class="drop__meta"></span>
-        </figcaption>
-        <button class="btn btn--tiny" type="button" data-clear>Cambiar</button>
-      </figure>
-    </div>
-
-    <footer class="step__foot">
-      <button class="btn btn--ghost" data-goto="1" type="button">Atrás</button>
-      <span class="status" data-status="2">Esperando imagen de referencia…</span>
-      <button class="btn btn--primary" id="btn-analyze" type="button" disabled>Analizar imágenes</button>
-    </footer>
-  </section>
-
-  <!-- ══════════ PASO 3 · PLAN DE CONSTRUCCIÓN ══════════ -->
-  <section class="step" data-step="3" aria-label="Paso 3: plan de construcción">
-    <div class="step__head">
-      <span class="step__eyebrow">Paso 03 / 04</span>
-      <h1 class="step__title">Plan de construcción</h1>
-      <p class="step__sub">Prompt Técnico Maestro generado a partir de tus dos imágenes. Léelo, editalo y ajústalo sin restricciones.</p>
-    </div>
-
-    <div class="chips" id="plan-chips">
-      <span class="chip" data-chip="sketch">boceto</span>
-      <span class="chip" data-chip="ref">referencia</span>
-      <span class="chip chip--muted" id="chip-chars">0 car.</span>
-    </div>
-
-    <div class="editor">
-      <div class="editor__bar">
-        <span class="editor__file">prompt-tecnico-maestro.txt</span>
-        <div class="editor__tools">
-          <button class="btn btn--tiny" id="btn-reanalyze" type="button">Regenerar</button>
-        </div>
-      </div>
-      <textarea id="prompt-editor" spellcheck="false"
-                placeholder="El prompt técnico aparecerá aquí…"></textarea>
-    </div>
-
-    <footer class="step__foot">
-      <button class="btn btn--ghost" data-goto="2" type="button">Atrás</button>
-      <span class="status" data-status="3">Edita el plan cuando quieras.</span>
-      <button class="btn btn--primary" id="btn-build" type="button">Ejecutar y renderizar</button>
-    </footer>
-  </section>
-
-  <!-- ══════════ PASO 4 · WORKSPACE ══════════ -->
-  <section class="step step--workspace" data-step="4" aria-label="Paso 4: ejecutar y renderizar">
+  <!-- ══════════ EDITOR  ══════════ -->
+  <section class="step step--workspace" id="workspace" aria-label="Editor de la ilustración">
 
     <aside class="props" aria-label="Panel de propiedades">
       <header class="props__head">
@@ -181,6 +61,11 @@
       </div>
 
       <div class="props__body" id="props-body"><!-- controles dinámicos --></div>
+      <section class="cc-ask" aria-label="Pedir cambios desde Claude Code">
+        <h3 class="cc-ask__title">¿Quieres cambios?</h3>
+        <p class="cc-ask__text">Pídelos desde Claude Code: describe qué cambiar y Claude edita el HTML, lo valida y te devuelve el arte actualizado.</p>
+        <p class="cc-ask__example">“Haz la pantalla más clara y quita la sombra del teclado”</p>
+      </section>
       <footer class="props__foot">
         <span class="status" data-status="4">—</span>
       </footer>
@@ -196,7 +81,6 @@
           <button class="btn btn--tiny" id="btn-reload" type="button">Recargar</button>
           <button class="btn btn--tiny" id="btn-copy" type="button">Copiar HTML</button>
           <button class="btn btn--tiny" id="btn-download" type="button">Descargar</button>
-          <button class="btn btn--tiny btn--ghost" data-goto="3" type="button">Editar plan</button>
         </div>
       </header>
       <div class="sandbox__viewport">
