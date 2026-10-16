@@ -90,7 +90,7 @@ async function handle(req, res) {
     }
 
     // ── estáticos del sitio ──
-    let rel = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+    let rel = pathname === '/' ? 'editor.html' : pathname.replace(/^\/+/, '');
     const abs = safeJoin(SITE_ROOT, rel);
     if (!abs) return send(res, 403, 'Prohibido');
 
@@ -102,7 +102,7 @@ async function handle(req, res) {
       // SPA fallback: rutas sin extensión → index.html
       if (!path.extname(rel)) {
         try {
-          const html = await fs.readFile(path.join(SITE_ROOT, 'index.html'));
+          const html = await fs.readFile(path.join(SITE_ROOT, 'editor.html'));
           return send(res, 200, html, MIME['.html']);
         } catch { /* sigue al 404 */ }
       }

@@ -108,7 +108,7 @@ function buildServer() {
             ...(v.type === 'range' ? { min: v.min, max: v.max, step: v.step, unit: v.unit, displayUnit: v.displayUnit } : {}),
           })),
           // abriendo la UI con este hash se renderiza el arte sin storage
-          uiUrl: `${process.env.URL || 'https://ccsketch.kitifica.com'}/${buildFragment(html)}`,
+          uiUrl: `${process.env.URL || 'https://cssketch.kitifica.com'}/editor.html${buildFragment(html)}`,
         })],
         isError: !r.ok,
       };

@@ -43,7 +43,7 @@ Registro en `~/.claude.json`:
 
 ### 3. MCP HTTP (remoto, stateless)
 
-`https://ccsketch.kitifica.com/mcp` — Streamable HTTP, sin storage.
+`https://cssketch.kitifica.com/mcp` — Streamable HTTP, sin storage.
 
 | Tool | Hace |
 |------|------|
@@ -58,7 +58,7 @@ Registro:
   "mcpServers": {
     "cssketch-remote": {
       "type": "http",
-      "url": "https://ccsketch.kitifica.com/mcp"
+      "url": "https://cssketch.kitifica.com/mcp"
     }
   }
 }
@@ -92,7 +92,8 @@ El Prompt Técnico Maestro completo está en [`mcp/prompt.js`](mcp/prompt.js).
 ## Estructura
 
 ```
-index.html              UI (4 pasos)
+editor.html            Editor de la ilustración (una vista)
+index.html             Landing del MCP
 css/styles.css          tokens + layout
 js/
   parser.js             extrae variables de :root (DOM-free, compartible)
