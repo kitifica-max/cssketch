@@ -18,6 +18,8 @@ let frame = null;
 let doc = null;
 let lastCode = '';
 
+import { stripFromClone } from './element-editor.js';
+
 /** nombre → valor ya formateado, pendiente de escribirse */
 let pending = new Map();
 /** nombre → valor ya escrito en el documento (para diffs) */
@@ -191,6 +193,7 @@ export function exportHTML() {
 
   try {
     const clone = doc.documentElement.cloneNode(true);
+    stripFromClone(clone);   // quita overlays/estilos del editor de elementos
     // limpia el atributo style inline → lo volvemos a meter en :root
     const inline = clone.getAttribute('style') || '';
     clone.removeAttribute('style');

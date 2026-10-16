@@ -7,6 +7,7 @@
 import { analyzeImages, generateCode } from './api-mock.js';
 import { parseVariables, formatValue, prettify } from './parser.js';
 import * as renderer from './renderer.js';
+import * as elementEditor from './element-editor.js';
 import { loadArtFromHash } from './art-loader.js';
 
 /* ── estado ──────────────────────────────────────────────── */
@@ -23,7 +24,10 @@ const state = {
   originals: new Map(),   // name → valor original
   refs: new Map(),        // name → { inputs:[], valueEl }
   built: false,
+  editMode: false,
 };
+
+let editorCtl = null;   // controller del editor de elementos (iframe)
 
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -62,6 +66,16 @@ function cacheNodes() {
   el.btnCopy      = $('#btn-copy');
   el.btnDownload  = $('#btn-download');
   el.btnResetApp  = $('#btn-reset-app');
+
+  el.btnEditMode  = $('#btn-edit-mode');
+  el.selPanel     = $('#sel-panel');
+  el.selTitle     = $('#sel-title');
+  el.selProps     = $('#sel-props');
+  el.btnSelClose  = $('#btn-sel-close');
+  el.btnSelDel    = $('#btn-sel-del');
+  el.btnSelDup    = $('#btn-sel-dup');
+  el.btnSelDown   = $('#btn-sel-down');
+  el.btnSelUp     = $('#btn-sel-up');
 }
 
 /* ── utilidades ──────────────────────────────────────────── */
@@ -585,6 +599,150 @@ function onAfter(name, value, node) {
   }
 }
 
+/* ── editor de elementos (modo vectorial) ────────────────── */
+
+function setEditMode(on) {
+  state.editMode = on;
+  el.btnEditMode.setAttribute('aria-pressed', String(on));
+
+  if (on) {
+    attachEditor();
+    if (!editorCtl) {
+      toast('No hay arte cargado en el sandbox', true);
+      state.editMode = false;
+      el.btnEditMode.setAttribute('aria-pressed', 'false');
+      return;
+    }
+    setStatus('modo elementos activo · clic para seleccionar, arrastra para mover');
+    toast('Modo elementos: clic = seleccionar · arrastrar = mover · ⌫ = borrar');
+  } else {
+    editorCtl?.detach();
+    editorCtl = null;
+    clearSelPanel();
+    setStatus('workspace activo');
+  }
+}
+
+function attachEditor() {
+  const doc = renderer.getDoc();
+  if (!doc) return;
+  editorCtl?.detach();
+  editorCtl = elementEditor.attach(doc, {
+    onSelect: (elNode, props) => renderSelPanel(elNode, props),
+    onDirty: () => {
+      const n = renderer.countNodes();
+      el.frameMeta.textContent = `${n} nodos DOM · srcdoc aislado`;
+      el.frameFps.textContent = 'elementos editados sin guardar';
+    },
+  });
+}
+
+function clearSelPanel() {
+  el.selPanel.hidden = true;
+  el.selTitle.textContent = '—';
+  el.selProps.textContent = '';
+}
+
+function renderSelPanel(elNode, props) {
+  if (!elNode) { clearSelPanel(); return; }
+
+  el.selPanel.hidden = false;
+  const cls = [...elNode.classList].find((c) => c && c !== 'ck-ui') || '';
+  el.selTitle.textContent = cls ? `.${cls}` : elNode.tagName.toLowerCase();
+
+  el.selProps.textContent = '';
+  if (!props.length) {
+    el.selProps.innerHTML = '<p class="sel__empty">Este elemento no tiene variables inline (--x, --y, colores…)</p>';
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  for (const p of props) frag.appendChild(buildElControl(p));
+  el.selProps.appendChild(frag);
+}
+
+function buildElControl(p) {
+  const ctl = document.createElement('div');
+  ctl.className = `ctl ctl--${p.type}`;
+
+  const top = document.createElement('div');
+  top.className = 'ctl__top';
+
+  const label = document.createElement('span');
+  label.className = 'ctl__label';
+  label.innerHTML = `<code>${escapeHTML(p.name)}</code>`;
+
+  const valueEl = document.createElement('span');
+  valueEl.className = 'ctl__value';
+  valueEl.textContent = String(p.value);
+
+  top.append(label, valueEl);
+  ctl.appendChild(top);
+
+  if (p.type === 'range') {
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = String(p.min);
+    input.max = String(p.max);
+    input.step = String(p.step);
+    input.value = String(p.value);
+    input.dataset.elprop = p.name;
+    input.setAttribute('aria-label', p.name);
+    input.addEventListener('input', () => {
+      valueEl.textContent = input.value;
+      editorCtl?.setProp(p.name, input.value);
+    });
+    ctl.appendChild(input);
+  } else if (p.type === 'color') {
+    const row = document.createElement('div');
+    row.className = 'ctl__row';
+
+    const swatch = document.createElement('input');
+    swatch.type = 'color';
+    swatch.className = 'ctl__swatch';
+    const hex = /^#[0-9a-f]{3,8}$/i.test(p.value) ? p.value : '#ffffff';
+    swatch.value = hex.length === 4 || hex.length === 5
+      ? '#' + [...hex.slice(1)].map((c) => c + c).join('').slice(0, 7)
+      : hex.slice(0, 7);
+    swatch.setAttribute('aria-label', `${p.name} selector`);
+    swatch.addEventListener('input', () => {
+      valueEl.textContent = swatch.value;
+      editorCtl?.setProp(p.name, swatch.value);
+    });
+
+    const text = document.createElement('input');
+    text.type = 'text';
+    text.className = 'ctl__hex';
+    text.value = p.value;
+    text.spellcheck = false;
+    text.addEventListener('change', () => {
+      if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text.value.trim())) {
+        text.classList.remove('is-invalid');
+        valueEl.textContent = text.value;
+        editorCtl?.setProp(p.name, text.value);
+      } else {
+        text.classList.add('is-invalid');
+      }
+    });
+
+    row.append(swatch, text);
+    ctl.appendChild(row);
+  } else {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'ctl__text';
+    input.value = p.value;
+    input.spellcheck = false;
+    input.addEventListener('change', () => {
+      valueEl.textContent = input.value;
+      editorCtl?.setProp(p.name, input.value);
+    });
+    ctl.appendChild(input);
+  }
+
+  return ctl;
+}
+
 /* ── acciones del workspace ──────────────────────────────── */
 
 function resetVars() {
@@ -662,6 +820,7 @@ function downloadHTML() {
 }
 
 function resetApp() {
+  if (state.editMode) setEditMode(false);
   if (state.sketchURL) URL.revokeObjectURL(state.sketchURL);
   if (state.refURL) URL.revokeObjectURL(state.refURL);
 
@@ -713,6 +872,11 @@ function init() {
       if (state.built) {
         setStepStatus(4, `${state.vars.length} variables · ${evt.nodes} nodos`, 'ok');
       }
+      // readjunta el editor de elementos si el modo quedó activo
+      if (state.editMode) {
+        attachEditor();
+        if (editorCtl) setStatus('modo elementos activo · clic para seleccionar, arrastra para mover');
+      }
     }
   });
 
@@ -754,6 +918,24 @@ function init() {
   el.btnCopy.addEventListener('click', copyHTML);
   el.btnDownload.addEventListener('click', downloadHTML);
   el.btnResetApp.addEventListener('click', resetApp);
+
+  // editor de elementos (modo vectorial)
+  el.btnEditMode.addEventListener('click', () => setEditMode(!state.editMode));
+  el.btnSelClose.addEventListener('click', () => {
+    editorCtl?.detach();
+    if (state.editMode) attachEditor();   // limpia la selección re-adjuntando
+  });
+  el.btnSelDel.addEventListener('click', () => {
+    editorCtl?.deleteSelected();
+    clearSelPanel();
+    toast('Elemento borrado · usa “Copiar HTML” para exportar');
+  });
+  el.btnSelDup.addEventListener('click', () => {
+    editorCtl?.duplicateSelected();
+    toast('Elemento duplicado (a la derecha y abajo)');
+  });
+  el.btnSelDown.addEventListener('click', () => editorCtl?.moveLayer(-1));
+  el.btnSelUp.addEventListener('click', () => editorCtl?.moveLayer(1));
 
   // atajos: Cmd/Ctrl+Enter ejecuta el plan
   document.addEventListener('keydown', (e) => {

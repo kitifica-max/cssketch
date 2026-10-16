@@ -165,6 +165,21 @@
         <button class="btn btn--tiny" id="btn-reset-vars" type="button">Reset vars</button>
         <button class="btn btn--tiny" id="btn-collapse" type="button">Colapsar todo</button>
       </div>
+
+      <div class="sel" id="sel-panel" hidden>
+        <header class="sel__head">
+          <span class="sel__title" id="sel-title">—</span>
+          <button class="btn btn--tiny" id="btn-sel-close" type="button" aria-label="Deseleccionar">✕</button>
+        </header>
+        <div class="sel__actions">
+          <button class="btn btn--tiny" id="btn-sel-del" type="button">Borrar</button>
+          <button class="btn btn--tiny" id="btn-sel-dup" type="button">Duplicar</button>
+          <button class="btn btn--tiny" id="btn-sel-down" type="button" title="Enviar atrás">− atrás</button>
+          <button class="btn btn--tiny" id="btn-sel-up" type="button" title="Traer adelante">+ adelante</button>
+        </div>
+        <div class="sel__props" id="sel-props"><!-- controles del elemento --></div>
+      </div>
+
       <div class="props__body" id="props-body"><!-- controles dinámicos --></div>
       <footer class="props__foot">
         <span class="status" data-status="4">—</span>
@@ -176,6 +191,8 @@
         <span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="sandbox__file">sandbox · index.html</span>
         <div class="sandbox__tools">
+          <button class="btn btn--tiny btn--toggle" id="btn-edit-mode" type="button"
+                  aria-pressed="false" title="Selecciona, arrastra, duplica o borra piezas del arte">Elementos</button>
           <button class="btn btn--tiny" id="btn-reload" type="button">Recargar</button>
           <button class="btn btn--tiny" id="btn-copy" type="button">Copiar HTML</button>
           <button class="btn btn--tiny" id="btn-download" type="button">Descargar</button>
