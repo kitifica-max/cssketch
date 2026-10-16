@@ -22,7 +22,7 @@ Herramientas que leen/escriben en tu disco y sirven un preview local:
 
 | Tool | Hace |
 |------|------|
-| `cssketch_start(sketch_path, ref_path, hint?)` | Lee las imágenes, devuelve el Prompt Técnico Maestro + las imágenes |
+| `cssketch_start(sketch_path?, ref_path?, hint?)` | Prompt isométrico (cuadrícula 30°, orden de capas). Referencia opcional, no tiene que ser isométrica; sin imágenes basta `hint` |
 | `cssketch_save(name, html)` | Valida, escribe en `~/cssketch/artes/<name>.html`, arranca preview |
 | `cssketch_validate(html)` | Valida contra el contrato + manifest de variables |
 | `cssketch_list()` | Lista los artes guardados |

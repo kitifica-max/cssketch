@@ -9,22 +9,62 @@
 
 import { parseVariables, extractRootBlock } from '../js/parser.js';
 
-/* ── técnicas exigidas por el prompt ────────────────────── */
+/* ── técnicas exigidas por el prompt (solo isométrico) ──── */
 const TECHNIQUES = [
-  { id: 'css-vars',        label: 'Variables CSS en :root',      re: /--[\w-]+\s*:/ },
-  { id: 'calc',            label: 'calc() con variables',        re: /calc\(\s*var\(--/ },
-  { id: 'absolute',        label: 'Capas position:absolute',     re: /position\s*:\s*absolute/i },
-  { id: 'pseudo-before',   label: 'Pseudo-elemento ::before',    re: /::before|:before/ },
-  { id: 'pseudo-after',    label: 'Pseudo-elemento ::after',     re: /::after|:after/ },
-  { id: 'box-shadow',      label: 'Múltiples box-shadows',       re: /box-shadow\s*:[^;]{0,400},[^;]/ },
-  { id: 'linear-gradient', label: 'linear-gradient',             re: /linear-gradient\(/ },
-  { id: 'radial-gradient', label: 'radial-gradient',             re: /radial-gradient\(/ },
-  { id: 'conic-gradient',  label: 'conic-gradient',              re: /(?:repeating-)?conic-gradient\(/ },
-  { id: 'clip-path',       label: 'clip-path con polygon',       re: /clip-path\s*:\s*polygon\(/i },
-  { id: 'mask-image',      label: 'mask-image',                  re: /-?(?:webkit-)?mask-image\s*:/i },
-  { id: 'blend-mode',      label: 'mix-blend-mode',              re: /mix-blend-mode\s*:/i },
-  { id: 'filter',          label: 'filter',                      re: /filter\s*:\s*(?!none)/i },
-  { id: 'aspect-ratio',    label: 'aspect-ratio',                re: /aspect-ratio\s*:/i },
+  { id: 'css-vars',    label: 'Variables CSS en :root',         re: /--[\w-]+\s*:/ },
+  { id: 'calc',        label: 'calc() con variables',           re: /calc\(\s*var\(--/ },
+  { id: 'aspect-ratio',label: 'aspect-ratio',                   re: /aspect-ratio\s*:/i },
+  { id: 'svg-inline',  label: 'SVG inline con viewBox',         re: /<svg[\s>][^>]*viewBox/i },
+  { id: 'polygon-path',label: 'Polígonos/paths de caras',       re: /<(?:polygon|path)\b/i },
+  { id: 'iso-matrix',  label: 'Matriz isométrica (caras)',      re: /matrix\(\s*0?\.866/ },
+];
+
+/* Señales de proyección isométrica: matriz de cara (0.866) o transform 3D. */
+const ISO_SIGNALS = /matrix\(\s*0?\.866|rotateX\(|rotateY\(|matrix3d\(/i;
+
+/* Ángulos permitidos de arista (mod 180°) en la cuadrícula base: ±30° y vertical. */
+const GRID_ANGLES = [30, 90, 150];
+const GRID_TOLERANCE = 1.5;
+
+/** Cuenta aristas de <polygon> que no caen en la cuadrícula de 30°. */
+function offGridEdges(source) {
+  const off = [];
+  const re = /<polygon\b[^>]*\bpoints\s*=\s*"([^"]+)"/gi;
+  let m;
+  while ((m = re.exec(source)) !== null) {
+    const nums = m[1].trim().split(/[\s,]+/).map(Number);
+    const pts = [];
+    for (let i = 0; i + 1 < nums.length; i += 2) pts.push([nums[i], nums[i + 1]]);
+    for (let i = 0; i < pts.length; i++) {
+      const [x1, y1] = pts[i];
+      const [x2, y2] = pts[(i + 1) % pts.length];
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      if (Math.hypot(dx, dy) < 1) continue;
+      const a = ((Math.atan2(dy, dx) * 180) / Math.PI % 180 + 180) % 180;
+      const ok = GRID_ANGLES.some((g) => Math.abs(a - g) <= GRID_TOLERANCE);
+      if (!ok) off.push(`(${x1},${y1})→(${x2},${y2}) ${a.toFixed(1)}°`);
+    }
+  }
+  return off;
+}
+
+/** Orden de capas: los data-z deben aparecer en orden no decreciente en el DOM. */
+function zOrderBreaks(source) {
+  const zs = [...source.matchAll(/data-z\s*=\s*"(\d+)"/gi)].map((m) => Number(m[1]));
+  const breaks = [];
+  for (let i = 1; i < zs.length; i++) {
+    if (zs[i] < zs[i - 1]) breaks.push(`data-z="${zs[i]}" aparece después de data-z="${zs[i - 1]}"`);
+  }
+  return { count: zs.length, breaks };
+}
+
+/* Gradientes y efectos de pintura: no pertenecen al canon de línea/flat-tone. */
+const PAINTERLY = [
+  { id: 'gradient', label: 'degradados (linear/radial/conic-gradient)', re: /(?:repeating-)?(?:linear|radial|conic)-gradient\(/ },
+  { id: 'mask',     label: 'mask-image',                                re: /-?(?:webkit-)?mask-image\s*:/i },
+  { id: 'blend',    label: 'mix-blend-mode',                            re: /mix-blend-mode\s*:/i },
+  { id: 'blur',     label: 'filter/blur',                               re: /filter\s*:\s*(?!none)|feGaussianBlur/i },
 ];
 
 const FORBIDDEN = [
@@ -42,23 +82,6 @@ const FORBIDDEN = [
 function countNodes(html) {
   const tags = html.match(/<[a-zA-Z][^>]*>/g) || [];
   return tags.length;
-}
-
-/** ¿Hay al menos N selectores distintos con pseudo-elementos? */
-function countPseudoSelectors(css) {
-  const uniq = new Set();
-  const re = /([^{}]+)\{/g;
-  let m;
-  while ((m = re.exec(css)) !== null) {
-    const sel = m[1].trim();
-    if (/::?(?:before|after)/i.test(sel)) {
-      for (const part of sel.split(',')) {
-        const s = part.trim();
-        if (s) uniq.add(s);
-      }
-    }
-  }
-  return uniq.size;
 }
 
 /** Extrae todo el CSS de un documento (bloques <style> concatenados). */
@@ -165,24 +188,41 @@ export function validateArt(html) {
     }
   }
 
+  /* ── isométrico: el arte debe tener geometría de tres ejes ── */
+  if (!ISO_SIGNALS.test(source)) {
+    errors.push('No parece isométrico: falta transform de cara (matrix 0.866) o 3D (rotateX / matrix3d).');
+  }
+  const off = offGridEdges(source);
+  if (off.length) {
+    errors.push(`${off.length} arista(s) fuera de la cuadrícula de 30°. Ej.: ${off.slice(0, 3).join('; ')}.`);
+  }
+
+  /* ── orden de capas ── */
+  const z = zOrderBreaks(source);
+  if (z.count === 0) {
+    warnings.push('Sin orden de capas explícito: falta data-z en los grupos (ver ORDEN DE CAPAS).');
+  }
+  for (const b of z.breaks) {
+    errors.push(`Orden de capas roto: ${b}.`);
+  }
+
   /* ── técnicas ── */
   const techniques = TECHNIQUES.map((t) => ({
     id: t.id, label: t.label, present: t.re.test(source),
   }));
-  const missing = techniques.filter((t) => !t.present);
-  for (const t of missing) {
+  for (const t of techniques.filter((t) => !t.present)) {
     warnings.push(`Técnica ausente: ${t.label}.`);
+  }
+  for (const p of PAINTERLY) {
+    if (p.re.test(source)) {
+      warnings.push(`Efecto fuera del canon isométrico: ${p.label}. Usa tonos planos y línea.`);
+    }
   }
 
   /* ── profundidad / nodos ── */
   const nodes = countNodes(source);
   if (nodes < 40) {
     warnings.push(`Solo ${nodes} nodos de marcado. El prompt exige al menos 60 para lograr profundidad.`);
-  }
-
-  const pseudoSelectors = countPseudoSelectors(css);
-  if (pseudoSelectors < 5) {
-    warnings.push(`Solo ${pseudoSelectors} selectores con pseudo-elementos. El prompt exige al menos 8.`);
   }
 
   /* ── tamaño ── */
@@ -194,7 +234,7 @@ export function validateArt(html) {
     ok,
     errors,
     warnings,
-    stats: { nodes, styleBlocks, pseudoSelectors, sizeKB },
+    stats: { nodes, styleBlocks, sizeKB },
     techniques,
     variables,
     fragment: buildFragment(source),

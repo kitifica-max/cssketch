@@ -74,35 +74,38 @@ const server = new McpServer({ name: 'cssketch', version: '1.0.0' });
 server.registerTool(
   'cssketch_start',
   {
-    title: 'CSSketch · análisis de boceto',
+    title: 'CSSketch · prompt isométrico',
     description:
-      'Lee el boceto (estructura) y la referencia (estilo) desde disco, los devuelve como imágenes ' +
-      'y entrega el Prompt Técnico Maestro que rige la generación del CSS Art. ' +
-      'Usa este prompt para generar UN documento HTML autocontenido con <style> y :root paramétrico.',
+      'Prompt Técnico Maestro para ilustraciones isométricas (cuadrícula base de 30° a ambos lados). ' +
+      'La referencia es opcional y puede NO ser isométrica: se transpone al canon. ' +
+      'Sin referencia, basta la indicación de texto. Devuelve UN documento HTML con <style> y :root paramétrico.',
     inputSchema: {
-      sketch_path: z.string().describe('Ruta absoluta del boceto (estructura).'),
-      ref_path: z.string().describe('Ruta absoluta de la referencia (estilo).'),
-      hint: z.string().optional().describe('Indicación opcional del usuario (tono, paleta, época).'),
+      sketch_path: z.string().optional().describe('Ruta absoluta del boceto (estructura). Opcional.'),
+      ref_path: z.string().optional().describe('Ruta absoluta de la referencia (estilo y forma). Opcional; no tiene que ser isométrica.'),
+      hint: z.string().optional().describe('Indicación del usuario: objetos, paleta, estilo (line-art | flat-tone). Obligatoria si no hay imágenes.'),
     },
   },
   async ({ sketch_path, ref_path, hint }) => {
+    if (!sketch_path && !ref_path && !hint) {
+      return toolError('Sin imágenes ni indicación: pasa ref_path, sketch_path o hint.');
+    }
     try {
-      await fs.access(sketch_path);
-      await fs.access(ref_path);
-      if (!isImage(sketch_path)) return toolError(`El boceto no es una imagen: ${sketch_path}`);
-      if (!isImage(ref_path)) return toolError(`La referencia no es una imagen: ${ref_path}`);
+      const images = [sketch_path, ref_path].filter(Boolean);
+      for (const p of images) {
+        await fs.access(p);
+        if (!isImage(p)) return toolError(`No es una imagen: ${p}`);
+      }
 
       const prompt = buildPrompt({
-        sketch: fileLabel(sketch_path),
-        ref: fileLabel(ref_path),
+        sketch: sketch_path && fileLabel(sketch_path),
+        ref: ref_path && fileLabel(ref_path),
         hint,
       });
 
       return {
         content: [
           text(prompt),
-          await imageBlock(sketch_path),
-          await imageBlock(ref_path),
+          ...(await Promise.all(images.map(imageBlock))),
         ],
       };
     } catch (err) {
