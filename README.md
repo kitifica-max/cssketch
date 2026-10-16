@@ -43,7 +43,7 @@ Registro en `~/.claude.json`:
 
 ### 3. MCP HTTP (remoto, stateless)
 
-`https://cssketch.netlify.app/mcp` — Streamable HTTP, sin storage.
+`https://ccsketch.kitifica.com/mcp` — Streamable HTTP, sin storage.
 
 | Tool | Hace |
 |------|------|
@@ -58,7 +58,7 @@ Registro:
   "mcpServers": {
     "cssketch-remote": {
       "type": "http",
-      "url": "https://cssketch.netlify.app/mcp"
+      "url": "https://ccsketch.kitifica.com/mcp"
     }
   }
 }
