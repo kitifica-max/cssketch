@@ -154,6 +154,7 @@ server.registerTool(
           variables: report.variables.length,
           nodes: report.stats.nodes,
           techniques: `${report.techniques.filter((t) => t.present).length}/${report.techniques.length}`,
+          architecture: report.architecture,
           warnings: report.warnings,
         }),
       ],
@@ -183,6 +184,7 @@ server.registerTool(
           warnings: r.warnings,
           stats: r.stats,
           techniques: r.techniques,
+          architecture: r.architecture,
           variables: r.variables.map((v) => ({
             name: v.name, type: v.type, group: v.group,
             label: v.label, value: v.value,
