@@ -102,6 +102,7 @@ function buildServer() {
           warnings: r.warnings,
           stats: r.stats,
           techniques: r.techniques,
+          architecture: r.architecture,
           variables: r.variables.map((v) => ({
             name: v.name, type: v.type, group: v.group, label: v.label, value: v.value,
             ...(v.options ? { options: v.options } : {}),

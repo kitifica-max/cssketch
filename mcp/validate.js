@@ -103,6 +103,183 @@ function bracesBalanced(css) {
   return d === 0;
 }
 
+/* ── arquitectura de estilos: tokens, cascada, contraste ── */
+
+/** Propiedades que sólo deben recibir tokens (nunca un número literal). */
+const MEASURE_PROPS =
+  'stroke-width|stroke-dasharray|opacity|fill-opacity|stroke-opacity|font-size|letter-spacing|border-radius';
+
+/** Limpia comentarios, url() y cadenas para escanear literales sin falsos positivos. */
+function stripCss(css) {
+  return String(css)
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/url\([^)]*\)/gi, 'url()')
+    .replace(/"[^"]*"|'[^']*'/g, "''");
+}
+
+/** Rango [start,end) del bloque de tokens (:root o html) dentro del CSS saneado. */
+function tokenRange(css) {
+  for (const cand of [':root', 'html']) {
+    const re = new RegExp(`(?:^|[\\s}])${cand}\\s*\\{`, 'm');
+    const m = re.exec(css);
+    if (!m) continue;
+    const start = m.index + m[0].length - 1;
+    let depth = 0;
+    for (let i = start; i < css.length; i++) {
+      if (css[i] === '{') depth++;
+      else if (css[i] === '}') {
+        depth--;
+        if (depth === 0) return { selector: cand, start, end: i };
+      }
+    }
+  }
+  return null;
+}
+
+/** Color literal (hex/rgb/rgba/hsl/hsla) → [r,g,b] o null. */
+function literalRgb(v) {
+  const s = String(v || '').trim();
+  let m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);
+  if (m) {
+    let h = m[1];
+    if (h.length === 3) h = h.replace(/./g, (c) => c + c);
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(s);
+  if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
+  return null;
+}
+
+function isLiteralColor(v) {
+  return literalRgb(v) !== null;
+}
+
+/** Contraste WCAG relativo (ratio 1..21). */
+function contrastRatio(rgb1, rgb2) {
+  const lum = ([r, g, b]) => {
+    const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const a = lum(rgb1), b = lum(rgb2);
+  const hi = Math.max(a, b), lo = Math.min(a, b);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const FG_NAME = /(^|-)(ink|text|fg|line|stroke|caption|title)(-|$)/i;
+const BG_NAME = /(^|-)(paper|bg|background|surface|canvas|ground|base)(-|$)/i;
+
+/**
+ * Revisa la arquitectura de estilos exigida por el prompt:
+ * literales sólo en :root, selectores por clase, cascada ordenada,
+ * tokens con consumo y contraste ink/paper.
+ * @returns {{warnings:string[], architecture:object}}
+ */
+function architectureReport(css, source, variables) {
+  const warnings = [];
+  const nc = stripCss(css);
+  const range = tokenRange(nc);
+  const scan = range ? nc.slice(0, range.start) + nc.slice(range.end + 1) : nc;
+
+  /* 1. colores literales fuera de la capa de tokens (el lookahead descarta #face { } selector) */
+  const colorLits = [...new Set(scan.match(/#[0-9a-f]{3,8}\b(?!\s*[{,])|rgba?\([^)]*\)|hsla?\([^)]*\)/gi) || [])];
+  if (colorLits.length) {
+    warnings.push(
+      `Capa de tokens rota: ${colorLits.length} color(es) literal(es) fuera de ` +
+      `${range ? range.selector : ':root'} (${colorLits.slice(0, 4).join(', ')}${colorLits.length > 4 ? '…' : ''}). ` +
+      `El literal va en :root; fuera sólo var(--x).`
+    );
+  }
+
+  /* 2. medidas/opacidad literales fuera de :root */
+  const measureLits = [];
+  const mre = new RegExp(`(?:^|[;{}])\\s*(${MEASURE_PROPS})\\s*:\\s*([^;{}]+)`, 'gi');
+  let m;
+  while ((m = mre.exec(scan)) !== null) {
+    const val = m[2].trim();
+    if (/^(?:calc|var|inherit|initial|unset|none)\b/i.test(val)) continue;
+    if (/^-?\d*\.?\d/.test(val)) measureLits.push(`${m[1]}: ${val}`);
+  }
+  if (measureLits.length) {
+    warnings.push(
+      `Valores no paramétricos fuera de :root (${measureLits.slice(0, 3).join('; ')}). ` +
+      `Usa calc(var(--x) * 1unit) o var(--x).`
+    );
+  }
+
+  /* 3. #id como selector de estilos (los id del marcado son estructurales) */
+  const idSel = [...new Set([...scan.matchAll(/(?:^|[;}])\s*(#[A-Za-z][\w-]*)\s*[,{]/g)].map((x) => x[1]))];
+  if (idSel.length) {
+    warnings.push(`Estilos por #id (${idSel.join(', ')}): estiliza por clase; los id del marcado no son selectores.`);
+  }
+
+  /* 4. literales de color en atributos del marcado */
+  const markupLits = [...new Set([
+    ...[...source.matchAll(/\b(?:fill|stroke)\s*=\s*"(#[0-9a-f]{3,8})"/gi)].map((x) => `${x[0]}`),
+    ...[...source.matchAll(/\bstyle="[^"]*(?:#[0-9a-f]{3,8}|rgba?\()[^"]*"/gi)].map((x) => x[0].slice(0, 60)),
+  ])];
+  if (markupLits.length) {
+    warnings.push(
+      `Literales de color en el marcado (${markupLits.slice(0, 3).join('; ')}). ` +
+      `La apariencia vive en clases CSS alimentadas por tokens.`
+    );
+  }
+
+  /* 5. :root (settings) antes que cualquier otra regla */
+  let rootFirst = true;
+  if (range) {
+    const firstBrace = nc.indexOf('{');
+    const prelude = firstBrace >= 0 ? nc.slice(0, firstBrace).trim() : '';
+    if (!(prelude.startsWith('@') || prelude.includes(range.selector))) {
+      rootFirst = false;
+      warnings.push(
+        'Cascada desordenada: los tokens no son la primera regla. ' +
+        'Orden esperado: :root (settings) → base → escena → trazos → piezas → utilidades.'
+      );
+    }
+  }
+
+  /* 6. tokens declarados sin uso (DRY: un valor, una declaración) */
+  const used = new Set([...source.matchAll(/var\(\s*(--[\w-]+)/g)].map((x) => x[1]));
+  const unused = variables.filter((v) => !used.has(v.name)).map((v) => v.name);
+  if (unused.length) {
+    warnings.push(
+      `Tokens declarados sin uso (${unused.length}): ${unused.slice(0, 6).join(', ')}` +
+      `${unused.length > 6 ? '…' : ''}. Consumelos con var(--x) o elimínalos.`
+    );
+  }
+
+  /* 7. contraste de texto/tinta (WCAG 1.4.3 → 4.5:1) */
+  const contrast = [];
+  const fgVars = variables.filter((v) => isLiteralColor(v.value) && FG_NAME.test(v.name));
+  const bgVars = variables.filter((v) => isLiteralColor(v.value) && BG_NAME.test(v.name));
+  for (const f of fgVars) {
+    for (const b of bgVars) {
+      const ratio = Math.round(contrastRatio(literalRgb(f.value), literalRgb(b.value)) * 100) / 100;
+      contrast.push({ fg: f.name, bg: b.name, ratio, ok: ratio >= 4.5 });
+      if (ratio < 4.5) {
+        warnings.push(
+          `Contraste insuficiente: ${f.name} (${f.value}) sobre ${b.name} (${b.value}) = ${ratio}:1 ` +
+          `< 4.5:1 (WCAG 1.4.3; el contorno exige ≥3:1 en 1.4.11).`
+        );
+      }
+    }
+  }
+
+  return {
+    warnings,
+    architecture: {
+      tech: 'css-nativo (un solo <style>)',
+      tokensDeclared: variables.length,
+      tokensUsed: variables.length - unused.length,
+      unusedTokens: unused,
+      literalsOutsideRoot: colorLits.length + measureLits.length + markupLits.length,
+      idSelectors: idSel.length,
+      rootFirst,
+      contrast,
+    },
+  };
+}
+
 /* ── API principal ──────────────────────────────────────── */
 
 /**
@@ -116,6 +293,9 @@ function bracesBalanced(css) {
  *   stats: { nodes:number, styleBlocks:number, pseudoSelectors:number, sizeKB:number },
  *   techniques: Array<{id:string,label:string,present:boolean}>,
  *   variables: Array<import('../js/parser.js').parseVariables extends Function ? any : never>,
+ *   architecture: { tech:string, tokensDeclared:number, tokensUsed:number, unusedTokens:string[],
+ *                   literalsOutsideRoot:number, idSelectors:number, rootFirst:boolean,
+ *                   contrast:Array<{fg:string,bg:string,ratio:number,ok:boolean}> } | null,
  *   fragment: string
  * }}
  */
@@ -128,7 +308,7 @@ export function validateArt(html) {
     return {
       ok: false, errors: ['Documento vacío.'], warnings: [],
       stats: { nodes: 0, styleBlocks: 0, pseudoSelectors: 0, sizeKB: 0 },
-      techniques: [], variables: [], fragment: '',
+      techniques: [], variables: [], architecture: null, fragment: '',
     };
   }
 
@@ -154,6 +334,9 @@ export function validateArt(html) {
     if (f.re.test(source)) {
       errors.push(`Contenido prohibido por el contrato: ${f.label}.`);
     }
+  }
+  if (/!important/i.test(stripCss(css))) {
+    errors.push('Regla con !important: prohibida por el contrato. Ordena la cascada en su lugar.');
   }
 
   /* ── :root + variables ── */
@@ -228,6 +411,10 @@ export function validateArt(html) {
   /* ── tamaño ── */
   const sizeKB = Math.round(source.length / 102.4) / 10;
 
+  /* ── arquitectura de estilos (tokens, cascada, contraste) ── */
+  const arch = architectureReport(css, source, variables);
+  warnings.push(...arch.warnings);
+
   const ok = errors.length === 0;
 
   return {
@@ -237,12 +424,15 @@ export function validateArt(html) {
     stats: { nodes, styleBlocks, sizeKB },
     techniques,
     variables,
+    architecture: arch.architecture,
     fragment: buildFragment(source),
   };
 }
 
 function isColorValue(v) {
   const s = String(v || '').trim();
+  // alias semántico: --top: var(--ink) hereda el color de su token base
+  if (/^var\(\s*--[\w-]+(\s*,[^)]*)?\)$/i.test(s)) return true;
   return /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|rgba?\([^)]*\)|hsla?\([^)]*\))$/i.test(s);
 }
 
