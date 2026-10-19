@@ -359,13 +359,14 @@ function setEditMode(on) {
   if (on) {
     attachEditor();
     if (!editorCtl) {
-      toast('No hay arte cargado en el sandbox', true);
-      state.editMode = false;
-      el.btnEditMode.setAttribute('aria-pressed', 'false');
+      // el sandbox aún no terminó de cargar: se queda el modo armado
+      // y el evento 'load' del iframe adjunta el editor al terminar
+      setStatus('cargando sandbox · el modo elementos se activará solo', 'busy');
+      toast('Sandbox cargando: el modo elementos se activará automáticamente');
       return;
     }
-    setStatus('modo elementos activo · clic para seleccionar, arrastra para mover');
-    toast('Modo elementos: clic = seleccionar · arrastrar = mover · ⌫ = borrar');
+    setStatus('modo elementos activo · clic para seleccionar, arrastrar para mover');
+    toast('Modo elementos: clic = seleccionar · arrastrar = mover · esquinas = escalar · ⌫ = borrar');
   } else {
     editorCtl?.detach();
     editorCtl = null;
@@ -399,7 +400,10 @@ function renderSelPanel(elNode, props) {
 
   el.selPanel.hidden = false;
   const cls = [...elNode.classList].find((c) => c && c !== 'ck-ui') || '';
-  el.selTitle.textContent = cls ? `.${cls}` : elNode.tagName.toLowerCase();
+  const tag = elNode.tagName.toLowerCase();
+  el.selTitle.textContent = elNode.id
+    ? `${tag}#${elNode.id}${cls ? '.' + cls : ''}`
+    : cls ? `.${cls}` : tag;
 
   el.selProps.textContent = '';
   if (!props.length) {
@@ -591,7 +595,10 @@ function init() {
       // readjunta el editor de elementos si el modo quedó activo
       if (state.editMode) {
         attachEditor();
-        if (editorCtl) setStatus('modo elementos activo · clic para seleccionar, arrastra para mover');
+        if (editorCtl) {
+          setStatus('modo elementos activo · clic para seleccionar, arrastrar para mover');
+          toast('Modo elementos activo');
+        }
       }
     }
   });
@@ -606,6 +613,12 @@ function init() {
 
   // editor de elementos (modo vectorial)
   el.btnEditMode.addEventListener('click', () => setEditMode(!state.editMode));
+  // el foco puede quedar en la UI madre (p. ej. tras pulsar "Elementos"):
+  // en ese caso las teclas nunca llegarían al iframe, así que se reenvían
+  document.addEventListener('keydown', (e) => {
+    if (!state.editMode || !editorCtl) return;
+    editorCtl.handleKey(e);
+  });
   el.btnSelClose.addEventListener('click', () => {
     editorCtl?.detach();
     if (state.editMode) attachEditor();   // limpia la selección re-adjuntando
