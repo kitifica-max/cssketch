@@ -17,6 +17,7 @@ const TECHNIQUES = [
   { id: 'svg-inline',  label: 'SVG inline con viewBox',         re: /<svg[\s>][^>]*viewBox/i },
   { id: 'polygon-path',label: 'Polígonos/paths de caras',       re: /<(?:polygon|path)\b/i },
   { id: 'iso-matrix',  label: 'Matriz isométrica (caras)',      re: /matrix\(\s*0?\.866/ },
+  { id: 'fillet',      label: 'Filetes/curvas (rx, círculos, arcos)', re: /<circle\b|<ellipse\b|\brx\s*=|\bry\s*=|\bd\s*=\s*"[^"]*[AaCcQq]/i },
 ];
 
 /* Señales de proyección isométrica: matriz de cara (0.866) o transform 3D. */
@@ -107,7 +108,7 @@ function bracesBalanced(css) {
 
 /** Propiedades que sólo deben recibir tokens (nunca un número literal). */
 const MEASURE_PROPS =
-  'stroke-width|stroke-dasharray|opacity|fill-opacity|stroke-opacity|font-size|letter-spacing|border-radius';
+  'stroke-width|stroke-dasharray|opacity|fill-opacity|stroke-opacity|font-size|letter-spacing|border-radius|rx|ry';
 
 /** Limpia comentarios, url() y cadenas para escanear literales sin falsos positivos. */
 function stripCss(css) {
@@ -167,6 +168,18 @@ function contrastRatio(rgb1, rgb2) {
 
 const FG_NAME = /(^|-)(ink|text|fg|line|stroke|caption|title)(-|$)/i;
 const BG_NAME = /(^|-)(paper|bg|background|surface|canvas|ground|base)(-|$)/i;
+
+/** Cuenta elementos curvos (círculos, elipses, arcos/bezier en paths) vs polígonos. */
+function countCurves(source, css) {
+  const polygons = (source.match(/<polygon\b/gi) || []).length;
+  const elements = (source.match(/<(?:circle|ellipse)\b/gi) || []).length;
+  let pathCurves = 0;
+  for (const m of source.matchAll(/\bd\s*=\s*"([^"]+)"/gi)) {
+    pathCurves += (m[1].match(/[AaCcQqSsTt]\s*-?[\d.]/g) || []).length;
+  }
+  const rxAttr = (source.match(/\brx\s*=/gi) || []).length;
+  return { polygons, curves: elements + pathCurves + rxAttr };
+}
 
 /**
  * Revisa la arquitectura de estilos exigida por el prompt:
@@ -290,7 +303,7 @@ function architectureReport(css, source, variables) {
  *   ok: boolean,
  *   errors: string[],
  *   warnings: string[],
- *   stats: { nodes:number, styleBlocks:number, pseudoSelectors:number, sizeKB:number },
+ *   stats: { nodes:number, styleBlocks:number, sizeKB:number, shapes:{polygons:number,curves:number} },
  *   techniques: Array<{id:string,label:string,present:boolean}>,
  *   variables: Array<import('../js/parser.js').parseVariables extends Function ? any : never>,
  *   architecture: { tech:string, tokensDeclared:number, tokensUsed:number, unusedTokens:string[],
@@ -307,7 +320,7 @@ export function validateArt(html) {
   if (!source.trim()) {
     return {
       ok: false, errors: ['Documento vacío.'], warnings: [],
-      stats: { nodes: 0, styleBlocks: 0, pseudoSelectors: 0, sizeKB: 0 },
+      stats: { nodes: 0, styleBlocks: 0, sizeKB: 0, shapes: { polygons: 0, curves: 0 } },
       techniques: [], variables: [], architecture: null, fragment: '',
     };
   }
@@ -415,13 +428,22 @@ export function validateArt(html) {
   const arch = architectureReport(css, source, variables);
   warnings.push(...arch.warnings);
 
+  /* ── curvas vs cajas: avisar si la escena es solo polígonos (anti-boxie) ── */
+  const shape = countCurves(source, css);
+  if (shape.polygons >= 6 && shape.curves === 0) {
+    warnings.push(
+      `Escena "boxie": ${shape.polygons} polígonos y 0 curvas. Aplica el método caja → círculo → recorte ` +
+      `(ver Volúmenes curvos): cilindros, aros, casquetes, semicírculos o troncos de cono.`
+    );
+  }
+
   const ok = errors.length === 0;
 
   return {
     ok,
     errors,
     warnings,
-    stats: { nodes, styleBlocks, sizeKB },
+    stats: { nodes, styleBlocks, sizeKB, shapes: shape },
     techniques,
     variables,
     architecture: arch.architecture,
